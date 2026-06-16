@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
 import Stepper, { STEPS } from "@/components/Stepper";
-import { DIMENSIONS, SCALE } from "@/lib/autoEval";
+import AutoEvalChat, { EvalSummary } from "@/components/AutoEvalChat";
 
 type Perso = { nom: string; prenom: string; situation: string; ville: string; pays: string };
 
@@ -13,13 +13,17 @@ export default function InscriptionPage() {
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
 
+  // Étape 1
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [pwd2, setPwd2] = useState("");
+  // Étape 2
   const [perso, setPerso] = useState<Perso>({ nom: "", prenom: "", situation: "", ville: "", pays: "" });
-  const [activeDim, setActiveDim] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  // Étape 3 : entretien d'auto-évaluation mené par l'agent SUBSIDIUM
+  const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
+  // Étape 4
   const [accepted, setAccepted] = useState(false);
+
   const [error, setError] = useState("");
 
   function back() {
@@ -53,11 +57,6 @@ export default function InscriptionPage() {
     setStep((s) => s + 1);
   }
 
-  function nextDimension() {
-    if (activeDim < DIMENSIONS.length - 1) setActiveDim((d) => d + 1);
-    else setStep(3);
-  }
-
   function finish() {
     setError("");
     if (!accepted) return setError("Vous devez accepter la charte pour finaliser votre inscription.");
@@ -65,6 +64,7 @@ export default function InscriptionPage() {
     setDone(true);
   }
 
+  /* ---------- écran de fin ---------- */
   if (done) {
     return (
       <AuthShell wide>
@@ -76,6 +76,12 @@ export default function InscriptionPage() {
             </svg>
           </div>
           <h2>Votre engagement commence ici !</h2>
+          {evalSummary && (
+            <p className="done-palier">
+              Palier obtenu : <b>{evalSummary.palier}</b> · {evalSummary.total}/60
+              {evalSummary.badge_n2_octroyable ? " · badge Initiateur N2" : ""}
+            </p>
+          )}
           <p>
             Votre compte a bien été créé. Bienvenue au sein de la communauté ! Vous pouvez désormais
             accéder à la plateforme et participer pleinement à la démarche citoyenne et éthique.
@@ -99,6 +105,7 @@ export default function InscriptionPage() {
 
       <Stepper current={step} />
 
+      {/* ---------- Étape 1 ---------- */}
       {step === 0 && (
         <>
           <h1 className="h-form">Mes informations de connexion</h1>
@@ -120,6 +127,7 @@ export default function InscriptionPage() {
         </>
       )}
 
+      {/* ---------- Étape 2 ---------- */}
       {step === 1 && (
         <>
           <h1 className="h-form">Mes informations personnelles</h1>
@@ -169,42 +177,19 @@ export default function InscriptionPage() {
         </>
       )}
 
+      {/* ---------- Étape 3 : auto-évaluation menée par l'agent ---------- */}
       {step === 2 && (
         <>
           <h1 className="h-form">Mon auto-évaluation éthique</h1>
-          <div className="themebar">
-            {DIMENSIONS.map((d, i) => (
-              <button key={d.key} className={i === activeDim ? "on" : ""} onClick={() => setActiveDim(i)} type="button">
-                {d.title.split(" ")[0]}
-              </button>
-            ))}
-          </div>
-          <h3 style={{ fontFamily: "var(--font-display), cursive", fontStyle: "italic", color: "var(--plum)", fontSize: "1.3rem", marginBottom: 18 }}>
-            {DIMENSIONS[activeDim].title}
-          </h3>
-          {DIMENSIONS[activeDim].statements.map((st, si) => {
-            const id = `${DIMENSIONS[activeDim].key}-${si}`;
-            return (
-              <div className="statement" key={id}>
-                <p>{si + 1} — {st}</p>
-                <div className="scale">
-                  {SCALE.map((label, vi) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className={answers[id] === vi ? "sel" : ""}
-                      onClick={() => setAnswers({ ...answers, [id]: vi })}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          <p className="sub">
+            Un entretien d'accompagnement avec un agent SUBSIDIUM, qui évalue votre maturité citoyenne
+            sur les 20 dimensions de la grille et vous attribue un palier.
+          </p>
+          <AutoEvalChat onResult={setEvalSummary} />
         </>
       )}
 
+      {/* ---------- Étape 4 : charte ---------- */}
       {step === 3 && (
         <>
           <h1 className="h-form">Signature de la charte d'engagement</h1>
@@ -220,7 +205,7 @@ export default function InscriptionPage() {
               <b> responsabilités</b> ; pratiquer la <b>subsidiarité</b> et la <b>justice</b> ; agir avec
               <b> sobriété</b> ; favoriser la <b>participation</b> de chacun ; et <b>transmettre</b> ce que j'apprends.
             </p>
-            <p style={{ color: "var(--greymauve)", fontSize: ".82rem" }}>
+            <p className="muted" style={{ color: "var(--greymauve)", fontSize: ".82rem" }}>
               (Texte de présentation — la charte officielle complète sera intégrée ici.)
             </p>
           </div>
@@ -237,8 +222,8 @@ export default function InscriptionPage() {
         {step === 0 && <button className="btn btn-coral" onClick={next}>Valider mes informations</button>}
         {step === 1 && <button className="btn btn-coral" onClick={next}>Valider mes informations</button>}
         {step === 2 && (
-          <button className="btn btn-coral" onClick={nextDimension}>
-            {activeDim < DIMENSIONS.length - 1 ? "Suivant" : "Valider mon auto-évaluation"}
+          <button className="btn btn-coral" onClick={() => setStep(3)} disabled={!evalSummary}>
+            Continuer vers la charte
           </button>
         )}
         {step === 3 && <button className="btn btn-coral" onClick={finish}>Signer et finaliser mon inscription</button>}
