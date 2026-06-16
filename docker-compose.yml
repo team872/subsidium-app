@@ -1,0 +1,21 @@
+services:
+  subsidium-app:
+    build: .
+    image: subsidium-app:latest
+    container_name: subsidium-app
+    restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.subsidium-app.rule=Host(`subsidium.elfe.info`) && PathPrefix(`/app`)"
+      - "traefik.http.routers.subsidium-app.entrypoints=websecure"
+      - "traefik.http.routers.subsidium-app.priority=120"
+      - "traefik.http.routers.subsidium-app.tls=true"
+      - "traefik.http.routers.subsidium-app.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.subsidium-app.loadbalancer.server.port=3000"
+
+networks:
+  traefik:
+    external: true
