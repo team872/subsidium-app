@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
 
 export default function ConnexionPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,8 +18,9 @@ export default function ConnexionPage() {
       setError("Veuillez renseigner votre adresse mail et votre mot de passe.");
       return;
     }
-    // TODO : authentification réelle (à brancher sur l'API)
-    alert("Connexion simulée — à brancher sur l'authentification.");
+    // TODO : authentification réelle (à brancher sur l'API).
+    // Pour la démo, on entre directement dans l'espace membre.
+    router.push("/accueil");
   }
 
   return (
