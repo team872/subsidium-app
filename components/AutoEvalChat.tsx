@@ -15,11 +15,25 @@ export type EvalSummary = {
 
 const API = "/app/api/eval";
 
-// L'agent couvre la grille complète (20 dimensions, une question à la fois) : son
-// prompt système l'impose côté serveur. La barre de progression est donc calibrée
-// sur 20. Pour un entretien plus court, il faut un « mode inscription » côté agent.
-const TARGET_QUESTIONS = 20;
-const OPENER = "Bonjour, je suis prêt(e) à commencer l'entretien.";
+// Entretien d'inscription RACCOURCI : on guide l'agent pour poser une seule question
+// synthétique par grand domaine éthique (8 au lieu des 20 items un par un). Le scoring
+// /60 reste autoritatif côté agent : 8 réponses étayées suffisent à noter la grille.
+const TARGET_QUESTIONS = 8;
+const THEMES = [
+  "Dignité de la personne humaine",
+  "Bien commun",
+  "Responsabilité intégrale",
+  "Subsidiarité active",
+  "Justice & réciprocité",
+  "Sobriété / écologie intégrale",
+  "Participation effective",
+  "Transmission & éducation",
+];
+const OPENER =
+  "Bonjour, je suis prêt(e) à commencer. Pour cette inscription, merci de mener un entretien CONCIS : " +
+  "posez-moi UNE seule question synthétique par grand domaine, en m'invitant à donner un exemple concret vécu. " +
+  "N'abordez chaque domaine qu'une seule fois ; après le 8e domaine, invitez-moi à conclure. " +
+  "Les 8 domaines, dans l'ordre : " + THEMES.join(" ; ") + ".";
 
 // L'agent place sa question après un marqueur « QUESTION : » — on l'isole pour la mettre en valeur.
 function splitQuestion(text: string) {
@@ -148,8 +162,9 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
       <div className="eval-intro">
         <p>
           Cette étape n'est pas un test idéologique. Un agent SUBSIDIUM vous accompagne dans un court
-          entretien : à chaque question, répondez avec vos propres mots et, si vous le pouvez, illustrez
-          d'un exemple concret. Vous pourrez conclure et obtenir votre palier à tout moment.
+          entretien d'environ huit questions, une par grand domaine. Répondez avec vos propres mots et,
+          si vous le pouvez, illustrez d'un exemple concret vécu — c'est ce qui permet d'établir votre
+          palier. Vous pourrez conclure à tout moment.
         </p>
         <button type="button" className="btn btn-coral" onClick={start}>Démarrer l'entretien</button>
       </div>
@@ -164,7 +179,7 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
     <div className="eval-chat">
       <div className="eval-progress">
         <div className="eval-progress-head">
-          <span>Dimension {current} sur {TARGET_QUESTIONS}</span>
+          <span>Domaine {current} sur {TARGET_QUESTIONS}</span>
           <span>{Math.round(pct)} %</span>
         </div>
         <div className="eval-bar"><div className="eval-bar-fill" style={{ width: `${pct}%` }} /></div>
@@ -211,6 +226,9 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
           Envoyer
         </button>
       </div>
+      {asked >= TARGET_QUESTIONS && (
+        <p className="eval-hint">Vous avez parcouru les grands domaines : vous pouvez conclure et obtenir votre palier.</p>
+      )}
       <button type="button" className="btn btn-ghost eval-finish" onClick={finish} disabled={busy || history.length < 2}>
         Terminer l'entretien et obtenir mon palier
       </button>

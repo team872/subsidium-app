@@ -36,6 +36,7 @@
 }
 .chat-input input:focus{outline:none; border-color:var(--coral);}
 .chat-input .btn{flex:none;}
+.eval-hint{margin:12px 0 0; padding:.6rem .9rem; border-radius:12px; background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.35); color:#15803d; font-size:.86rem; text-align:center;}
 .eval-finish{margin-top:12px; width:100%; font-size:.9rem;}
 
 .eval-result{text-align:center; padding:6px 0;}
