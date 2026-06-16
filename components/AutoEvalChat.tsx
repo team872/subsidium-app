@@ -15,15 +15,11 @@ export type EvalSummary = {
 
 const API = "/app/api/eval";
 
-// Parcours d'inscription : entretien court et guidé. On demande à l'agent de
-// regrouper les 20 dimensions de la grille en ~TARGET_QUESTIONS thèmes, puis de
-// conclure. Le scoring serveur reste autoritatif (les 20 items sont déduits du
-// transcript ; la fiabilité reflète la concision de l'entretien).
-const TARGET_QUESTIONS = 8;
-const OPENER =
-  `Bonjour, je suis prêt(e) à commencer. Pour cette inscription, merci de mener un entretien court ` +
-  `d'environ ${TARGET_QUESTIONS} questions : regroupe les dimensions proches en grands thèmes, ` +
-  `pose une question concrète à la fois, puis invite-moi à conclure.`;
+// L'agent couvre la grille complète (20 dimensions, une question à la fois) : son
+// prompt système l'impose côté serveur. La barre de progression est donc calibrée
+// sur 20. Pour un entretien plus court, il faut un « mode inscription » côté agent.
+const TARGET_QUESTIONS = 20;
+const OPENER = "Bonjour, je suis prêt(e) à commencer l'entretien.";
 
 // L'agent place sa question après un marqueur « QUESTION : » — on l'isole pour la mettre en valeur.
 function splitQuestion(text: string) {
@@ -168,8 +164,8 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
     <div className="eval-chat">
       <div className="eval-progress">
         <div className="eval-progress-head">
-          <span>Entretien d'auto-évaluation</span>
-          <span>{current} / {TARGET_QUESTIONS} environ</span>
+          <span>Dimension {current} sur {TARGET_QUESTIONS}</span>
+          <span>{Math.round(pct)} %</span>
         </div>
         <div className="eval-bar"><div className="eval-bar-fill" style={{ width: `${pct}%` }} /></div>
       </div>
