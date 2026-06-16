@@ -80,7 +80,7 @@ export default function InscriptionPage() {
             Votre compte a bien été créé. Bienvenue au sein de la communauté ! Vous pouvez désormais
             accéder à la plateforme et participer pleinement à la démarche citoyenne et éthique.
           </p>
-          <button className="btn btn-coral" onClick={() => alert("Accès à la plateforme — à venir (espace membre).")}>
+          <button className="btn btn-coral" onClick={() => router.push("/accueil")}>
             Accéder à la plateforme
           </button>
         </div>
