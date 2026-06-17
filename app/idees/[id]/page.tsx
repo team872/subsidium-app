@@ -103,6 +103,7 @@ export default function IdeaDetailPage() {
             <div className="meta">
               <span className="auth">Par {idea.author}</span>
               <span>· {idea.date}</span>
+              {idea.location && <span>· {idea.location}</span>}
               <span>· {idea.messages} messages</span>
             </div>
             <p className="txt">{idea.desc} Les habitants du quartier soutiennent cette initiative et souhaitent la construire avec la collectivité, étape par étape, en s'appuyant sur des exemples concrets vécus sur le terrain.</p>

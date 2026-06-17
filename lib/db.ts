@@ -55,6 +55,7 @@ async function init(): Promise<void> {
       idea_id INT REFERENCES ideas(id) ON DELETE CASCADE,
       PRIMARY KEY (user_id, idea_id)
     );
+    ALTER TABLE ideas ADD COLUMN IF NOT EXISTS location TEXT;
   `);
 
   const { rows } = await p.query(`SELECT COUNT(*)::int AS n FROM ideas`);

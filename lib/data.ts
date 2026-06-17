@@ -23,11 +23,12 @@ export async function getUserPublic(id: number): Promise<PublicUser | null> {
 export type IdeaDTO = {
   id: number; cat: string; color: string; title: string; desc: string;
   author: string; status: string | null; date: string; messages: number;
+  location: string | null;
 };
 
 const IDEA_SELECT = `
   SELECT i.id, i.cat, i.color, i.title, i.descr AS "desc", i.author, i.status,
-         i.date_label AS "date",
+         i.date_label AS "date", i.location,
          (i.base_messages + (SELECT COUNT(*) FROM comments c WHERE c.idea_id = i.id))::int AS messages
   FROM ideas i`;
 
@@ -42,13 +43,13 @@ export async function getIdea(id: number): Promise<IdeaDTO | null> {
   return rows[0] ?? null;
 }
 
-export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number }): Promise<IdeaDTO> {
+export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number; location?: string | null }): Promise<IdeaDTO> {
   await ensureDb();
   const rows = await query<IdeaDTO>(
-    `INSERT INTO ideas (cat,color,title,descr,author,author_id,status,base_messages,date_label)
-     VALUES ($1,$2,$3,$4,$5,$6,'emise',0,to_char(now(),'DD/MM'))
-     RETURNING id, cat, color, title, descr AS "desc", author, status, date_label AS "date", 0 AS messages`,
-    [d.cat, d.color, d.title, d.desc, d.author, d.authorId]
+    `INSERT INTO ideas (cat,color,title,descr,author,author_id,status,base_messages,date_label,location)
+     VALUES ($1,$2,$3,$4,$5,$6,'emise',0,to_char(now(),'DD/MM'),$7)
+     RETURNING id, cat, color, title, descr AS "desc", author, status, date_label AS "date", location, 0 AS messages`,
+    [d.cat, d.color, d.title, d.desc, d.author, d.authorId, d.location ?? null]
   );
   return rows[0];
 }

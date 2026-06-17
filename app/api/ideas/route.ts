@@ -22,13 +22,14 @@ export async function POST(req: NextRequest) {
     const title = String(b.title || "").trim();
     const desc = String(b.desc || "").trim();
     const cat = String(b.cat || "").trim();
+    const location = String(b.location || "").trim() || null;
     if (!title || !desc || !cat) {
       return NextResponse.json({ error: "Titre, description et thématique requis." }, { status: 400 });
     }
     const u = await getUserPublic(uid);
     const author = u ? displayName(u) : "Citoyen";
     const color = CAT_COLOR[cat] || "#E8A98F";
-    const idea = await createIdea({ cat, color, title, desc, author, authorId: uid });
+    const idea = await createIdea({ cat, color, title, desc, author, authorId: uid, location });
     return NextResponse.json({ idea });
   } catch {
     return NextResponse.json({ error: "Création de l'idée impossible." }, { status: 500 });

@@ -93,3 +93,25 @@ a.icard:hover{transform:translateY(-2px); box-shadow:0 16px 30px -22px rgba(55,3
 .composer input:focus{outline:none; border-color:var(--coral);}
 .composer input:disabled{opacity:.6;}
 .composer .btn{flex:none;}
+
+/* ===== Modale « Exprimer une idée » ===== */
+.modal-overlay{position:fixed; inset:0; background:rgba(55,38,70,.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:60;}
+.modal{background:var(--paper); border-radius:22px; width:100%; max-width:520px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 40px 90px -40px rgba(55,38,70,.6); overflow:hidden;}
+.modal-head{display:flex; align-items:center; justify-content:space-between; padding:20px 22px 6px;}
+.modal-head h2{font-family:var(--font-display),cursive; font-style:italic; font-size:1.4rem; color:var(--plum);}
+.modal-x{background:var(--plum); color:#fff; border:none; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+.modal-body{padding:8px 22px 4px; overflow-y:auto;}
+.mfield{margin-bottom:14px;}
+.mfield label{display:block; font-size:.82rem; font-weight:700; color:var(--plum); margin-bottom:6px;}
+.mfield input,.mfield select,.mfield textarea{
+  width:100%; border:1px solid var(--line); border-radius:12px; padding:.7rem .9rem;
+  background:var(--cream); color:var(--plum); font-family:var(--font-body); font-size:.92rem;
+}
+.mfield input:focus,.mfield select:focus,.mfield textarea:focus{outline:none; border-color:var(--coral);}
+.mfield textarea{resize:vertical; min-height:90px;}
+.upload-zone{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  border:1.5px dashed rgba(242,123,106,.5); border-radius:14px; padding:18px; background:rgba(242,123,106,.06);
+  color:var(--coral-d); font-size:.82rem; font-weight:600;
+}
+.modal-foot{padding:14px 22px 20px; display:flex; justify-content:flex-end;}

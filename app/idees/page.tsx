@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import IdeaForm from "@/components/IdeaForm";
 import { CATEGORIES } from "@/lib/feed";
 import type { IdeaDTO } from "@/lib/data";
 import "@/components/MemberBoards.css";
@@ -22,6 +23,7 @@ export default function IdeesPage() {
   const [tab, setTab] = useState<TabKey>("toutes");
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     fetch("/app/api/ideas")
@@ -49,8 +51,18 @@ export default function IdeesPage() {
     <AppShell>
       <div className="board-head">
         <h1>Idées citoyennes</h1>
-        <button className="btn btn-coral">Exprimer une idée</button>
+        <button className="btn btn-coral" onClick={() => setShowForm(true)}>Exprimer une idée</button>
       </div>
+
+      {showForm && (
+        <IdeaForm
+          onClose={() => setShowForm(false)}
+          onCreated={(idea) => {
+            setItems((cur) => [idea, ...cur]);
+            setShowForm(false);
+          }}
+        />
+      )}
 
       <div className="board-tabs">
         {TABS.map((t) => (
