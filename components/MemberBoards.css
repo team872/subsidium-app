@@ -1,0 +1,56 @@
+/* ============ Écrans membres : Idées & Événements ============ */
+
+/* En-tête de page avec action à droite */
+.board-head{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:6px;}
+.board-head h1{font-family:var(--font-display),cursive; font-style:italic; font-size:1.7rem; color:var(--plum);}
+.board-head .btn{flex:none;}
+
+/* Onglets (Toutes les idées / suivies / émises / archivées) */
+.board-tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 18px; overflow-x:auto;}
+.board-tabs button{
+  flex:none; background:none; border:none; padding:10px 14px; cursor:pointer;
+  font-family:var(--font-body); font-weight:700; font-size:.86rem; color:var(--greymauve);
+  border-bottom:2px solid transparent; white-space:nowrap;
+}
+.board-tabs button.on{color:var(--coral-d); border-bottom-color:var(--coral);}
+
+/* Barre d'outils : recherche + filtre thématique */
+.board-tools{display:flex; gap:12px; margin-bottom:22px; flex-wrap:wrap;}
+.board-search{
+  flex:1; min-width:220px; display:flex; align-items:center; gap:10px;
+  background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:.7rem 1.1rem;
+}
+.board-search svg{flex:none; color:var(--greymauve);}
+.board-search input{flex:1; border:none; outline:none; background:none; font-family:var(--font-body); font-size:.92rem; color:var(--plum);}
+.board-select{
+  flex:none; border:1px solid var(--line); border-radius:999px; background:var(--paper);
+  color:var(--plum); font-family:var(--font-body); font-weight:600; font-size:.9rem; padding:.7rem 1.1rem; cursor:pointer;
+}
+
+/* Grille d'idées */
+.idees-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:18px;}
+.icard{background:var(--paper); border:1px solid var(--line); border-radius:18px; overflow:hidden; display:flex; flex-direction:column;}
+.icard .band{padding:12px 16px; display:flex; align-items:center;}
+.icard .band span{font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.03em; color:var(--plum);}
+.icard .bd{padding:14px 16px 16px; display:flex; flex-direction:column; flex:1;}
+.icard h3{font-family:var(--font-body); font-weight:800; font-size:1.02rem; color:var(--plum); line-height:1.28; margin-bottom:7px;}
+.icard p{font-size:.88rem; color:var(--mauve); line-height:1.5; flex:1;}
+.icard .foot{display:flex; align-items:center; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); font-size:.76rem; color:var(--greymauve);}
+.icard .foot .msg{display:flex; align-items:center; gap:5px;}
+.icard .foot .auth{font-weight:700; color:var(--mauve);}
+
+/* Grille d'actualités / événements */
+.actus-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(248px,1fr)); gap:18px;}
+.acard{background:var(--paper); border:1px solid var(--line); border-radius:18px; overflow:hidden; display:flex; flex-direction:column;}
+.acard .ph{height:128px; position:relative; background-size:cover; background-position:center;}
+.acard .ph .tg{position:absolute; left:12px; top:12px; font-size:.68rem; font-weight:800; color:#fff; background:var(--coral); padding:4px 10px; border-radius:999px;}
+.acard .ph .dt{position:absolute; right:12px; bottom:-16px; width:42px; height:42px; border-radius:12px; background:var(--paper); border:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;}
+.acard .ph .dt b{font-size:1rem; color:var(--coral-d); font-family:var(--font-display),cursive;}
+.acard .ph .dt small{font-size:.6rem; color:var(--mauve); text-transform:uppercase;}
+.acard .bd{padding:20px 16px 16px; display:flex; flex-direction:column; flex:1;}
+.acard h3{font-family:var(--font-body); font-weight:800; font-size:1rem; color:var(--plum); line-height:1.28; margin-bottom:6px;}
+.acard p{font-size:.84rem; color:var(--mauve); line-height:1.45; flex:1;}
+.acard .more{margin-top:12px; font-size:.8rem; font-weight:700; color:var(--coral-d);}
+
+/* État vide */
+.board-empty{padding:40px 8px; text-align:center; color:var(--greymauve); font-size:.95rem;}
