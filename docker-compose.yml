@@ -4,11 +4,15 @@ services:
     image: subsidium-app:latest
     container_name: subsidium-app
     restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - traefik
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
+      # App Next.js servie sous /app (basePath=/app), sur le domaine existant.
       - "traefik.http.routers.subsidium-app.rule=Host(`subsidium.elfe.info`) && PathPrefix(`/app`)"
       - "traefik.http.routers.subsidium-app.entrypoints=websecure"
       - "traefik.http.routers.subsidium-app.priority=120"
