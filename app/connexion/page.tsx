@@ -10,17 +10,33 @@ export default function ConnexionPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!email || !password) {
       setError("Veuillez renseigner votre adresse mail et votre mot de passe.");
       return;
     }
-    // TODO : authentification réelle (à brancher sur l'API).
-    // Pour la démo, on entre directement dans l'espace membre.
-    router.push("/accueil");
+    setBusy(true);
+    try {
+      const r = await fetch("/app/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setError(d.error || "Connexion impossible.");
+        setBusy(false);
+        return;
+      }
+      router.push("/accueil");
+    } catch {
+      setError("Connexion impossible pour le moment.");
+      setBusy(false);
+    }
   }
 
   return (
@@ -62,7 +78,9 @@ export default function ConnexionPage() {
         {error && <p className="msg" style={{ marginBottom: 14 }}>{error}</p>}
 
         <div className="actions-end">
-          <button type="submit" className="btn btn-coral">Se connecter</button>
+          <button type="submit" className="btn btn-coral" disabled={busy}>
+            {busy ? "Connexion…" : "Se connecter"}
+          </button>
         </div>
       </form>
 

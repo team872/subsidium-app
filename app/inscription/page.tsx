@@ -25,6 +25,7 @@ export default function InscriptionPage() {
   const [accepted, setAccepted] = useState(false);
 
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   function back() {
     setError("");
@@ -57,11 +58,38 @@ export default function InscriptionPage() {
     setStep((s) => s + 1);
   }
 
-  function finish() {
+  async function finish() {
     setError("");
     if (!accepted) return setError("Vous devez accepter la charte pour finaliser votre inscription.");
-    // TODO : créer le compte via l'API (auth + base de données)
-    setDone(true);
+    setBusy(true);
+    try {
+      const r = await fetch("/app/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password: pwd,
+          nom: perso.nom,
+          prenom: perso.prenom,
+          situation: perso.situation,
+          ville: perso.ville,
+          pays: perso.pays,
+          palier: evalSummary?.palier ?? null,
+          score: evalSummary?.total ?? null,
+          badge_n2: evalSummary?.badge_n2_octroyable ?? false,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setError(d.error || "Inscription impossible.");
+        setBusy(false);
+        return;
+      }
+      setDone(true);
+    } catch {
+      setError("Inscription impossible pour le moment.");
+      setBusy(false);
+    }
   }
 
   /* ---------- écran de fin ---------- */
@@ -226,7 +254,7 @@ export default function InscriptionPage() {
             Continuer vers la charte
           </button>
         )}
-        {step === 3 && <button className="btn btn-coral" onClick={finish}>Signer et finaliser mon inscription</button>}
+        {step === 3 && <button className="btn btn-coral" onClick={finish} disabled={busy}>{busy ? "Création du compte…" : "Signer et finaliser mon inscription"}</button>}
       </div>
     </AuthShell>
   );

@@ -1,18 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { EVENTS } from "@/lib/feed";
+import type { EventDTO } from "@/lib/data";
 import "@/components/MemberBoards.css";
 
 const TAGS = ["Tout afficher", "Nouveauté", "Concertation", "Forum", "Atelier", "Rencontre", "Récit"];
 
 export default function EvenementsPage() {
+  const [items, setItems] = useState<EventDTO[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("Tout afficher");
 
+  useEffect(() => {
+    fetch("/app/api/events")
+      .then((r) => r.json())
+      .then((d) => setItems(d.events || []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   const list = useMemo(() => {
-    return EVENTS.filter((ev) => {
+    return items.filter((ev) => {
       if (tag !== "Tout afficher" && ev.tag !== tag) return false;
       if (query) {
         const q = query.toLowerCase();
@@ -20,7 +30,7 @@ export default function EvenementsPage() {
       }
       return true;
     });
-  }, [query, tag]);
+  }, [items, query, tag]);
 
   return (
     <AppShell>
@@ -44,12 +54,14 @@ export default function EvenementsPage() {
         </select>
       </div>
 
-      {list.length === 0 ? (
+      {loading ? (
+        <p className="board-empty">Chargement des actualités…</p>
+      ) : list.length === 0 ? (
         <p className="board-empty">Aucune actualité ne correspond à votre recherche pour le moment.</p>
       ) : (
         <div className="actus-grid">
-          {list.map((ev, i) => (
-            <article className="acard" key={i}>
+          {list.map((ev) => (
+            <article className="acard" key={ev.id}>
               <div className="ph" style={{ backgroundImage: ev.grad }}>
                 <span className="tg">{ev.tag}</span>
                 <span className="dt"><b>{ev.day}</b><small>{ev.month}</small></span>

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+type Me = { prenom: string | null; nom: string | null; email: string; palier: string | null } | null;
 
 const ICONS: Record<string, JSX.Element> = {
   accueil: (
@@ -24,7 +26,21 @@ const NAV = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
+  const [me, setMe] = useState<Me>(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch("/app/api/auth/me").then((r) => r.json()).then((d) => setMe(d.user || null)).catch(() => {});
+  }, []);
+
+  const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "Invité";
+  const role = me?.palier || "Refondateur";
+
+  async function logout() {
+    await fetch("/app/api/auth/logout", { method: "POST" }).catch(() => {});
+    router.push("/connexion");
+  }
 
   return (
     <div className="app">
@@ -59,9 +75,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="who">
             <span className="av" />
             <span className="meta">
-              <b>Maria Daniel</b>
-              <small>Refondatrice</small>
+              <b>{name}</b>
+              <small>{role}</small>
             </span>
+            {me && (
+              <button onClick={logout} aria-label="Se déconnecter" title="Se déconnecter" style={{ marginLeft: "auto", background: "none", border: "none", color: "#C9BFD2", cursor: "pointer", opacity: 0.85, padding: 4 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+              </button>
+            )}
           </div>
         </div>
       </aside>

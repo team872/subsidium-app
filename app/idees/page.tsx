@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
-import { IDEAS, CATEGORIES } from "@/lib/feed";
+import { CATEGORIES } from "@/lib/feed";
+import type { IdeaDTO } from "@/lib/data";
 import "@/components/MemberBoards.css";
 
 const TABS = [
@@ -16,12 +17,22 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export default function IdeesPage() {
+  const [items, setItems] = useState<IdeaDTO[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("toutes");
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("");
 
+  useEffect(() => {
+    fetch("/app/api/ideas")
+      .then((r) => r.json())
+      .then((d) => setItems(d.ideas || []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   const list = useMemo(() => {
-    return IDEAS.filter((it) => {
+    return items.filter((it) => {
       if (tab === "suivies" && it.status !== "suivie") return false;
       if (tab === "emises" && it.status !== "emise") return false;
       if (tab === "archivees" && it.status !== "archivee") return false;
@@ -32,7 +43,7 @@ export default function IdeesPage() {
       }
       return true;
     });
-  }, [tab, query, cat]);
+  }, [items, tab, query, cat]);
 
   return (
     <AppShell>
@@ -66,12 +77,14 @@ export default function IdeesPage() {
         </select>
       </div>
 
-      {list.length === 0 ? (
+      {loading ? (
+        <p className="board-empty">Chargement des idées…</p>
+      ) : list.length === 0 ? (
         <p className="board-empty">Aucune idée ne correspond à votre recherche pour le moment.</p>
       ) : (
         <div className="idees-grid">
-          {list.map((it, i) => (
-            <Link href={`/idees/${IDEAS.indexOf(it)}`} className="icard" key={i}>
+          {list.map((it) => (
+            <Link href={`/idees/${it.id}`} className="icard" key={it.id}>
               <div className="band" style={{ background: it.color }}>
                 <span>{it.cat}</span>
               </div>
