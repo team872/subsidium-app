@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { IDEAS, CATEGORIES } from "@/lib/feed";
 import "@/components/MemberBoards.css";
@@ -70,7 +71,7 @@ export default function IdeesPage() {
       ) : (
         <div className="idees-grid">
           {list.map((it, i) => (
-            <article className="icard" key={i}>
+            <Link href={`/idees/${IDEAS.indexOf(it)}`} className="icard" key={i}>
               <div className="band" style={{ background: it.color }}>
                 <span>{it.cat}</span>
               </div>
@@ -85,7 +86,7 @@ export default function IdeesPage() {
                   <span className="auth">Par {it.author}</span>
                 </div>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       )}
