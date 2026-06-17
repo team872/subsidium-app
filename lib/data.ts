@@ -4,6 +4,7 @@ export type PublicUser = {
   id: number; email: string; nom: string | null; prenom: string | null;
   situation: string | null; ville: string | null; pays: string | null;
   palier: string | null; score: number | null; badge_n2: boolean;
+  created_at: string;
 };
 
 export function displayName(u: { prenom: string | null; nom: string | null; email: string }): string {
@@ -14,10 +15,28 @@ export function displayName(u: { prenom: string | null; nom: string | null; emai
 export async function getUserPublic(id: number): Promise<PublicUser | null> {
   await ensureDb();
   const rows = await query<PublicUser>(
-    `SELECT id,email,nom,prenom,situation,ville,pays,palier,score,badge_n2 FROM users WHERE id=$1`,
+    `SELECT id,email,nom,prenom,situation,ville,pays,palier,score,badge_n2,created_at FROM users WHERE id=$1`,
     [id]
   );
   return rows[0] ?? null;
+}
+
+export async function updateUser(
+  id: number,
+  f: { nom?: string; prenom?: string; situation?: string; ville?: string; pays?: string }
+): Promise<PublicUser | null> {
+  await ensureDb();
+  await query(
+    `UPDATE users SET
+       nom = COALESCE($2, nom),
+       prenom = COALESCE($3, prenom),
+       situation = COALESCE($4, situation),
+       ville = COALESCE($5, ville),
+       pays = COALESCE($6, pays)
+     WHERE id = $1`,
+    [id, f.nom ?? null, f.prenom ?? null, f.situation ?? null, f.ville ?? null, f.pays ?? null]
+  );
+  return getUserPublic(id);
 }
 
 export type IdeaDTO = {
