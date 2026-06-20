@@ -55,6 +55,23 @@ async function init(): Promise<void> {
       idea_id INT REFERENCES ideas(id) ON DELETE CASCADE,
       PRIMARY KEY (user_id, idea_id)
     );
+    -- Pièces jointes du débat (images / PDF), stockées en base (bytea)
+    CREATE TABLE IF NOT EXISTS attachments (
+      id SERIAL PRIMARY KEY,
+      comment_id INT REFERENCES comments(id) ON DELETE CASCADE,
+      filename TEXT, mime TEXT, size INT, data BYTEA,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+    -- Notifications in-app (ex. nouvelle participation sur une idée suivie)
+    CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY,
+      user_id INT REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT, idea_id INT, comment_id INT,
+      actor TEXT, message TEXT,
+      read BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read);
     ALTER TABLE ideas ADD COLUMN IF NOT EXISTS location TEXT;
 
     -- Progression du parcours (source de vérité du niveau de maturité 0..4)

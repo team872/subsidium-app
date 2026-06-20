@@ -18,18 +18,23 @@ const ICONS: Record<string, JSX.Element> = {
   evenements: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></svg>
   ),
+  notifications: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+  ),
 };
 
 const NAV = [
   { href: "/accueil", key: "accueil", label: "Accueil" },
   { href: "/idees", key: "idees", label: "Idées" },
   { href: "/evenements", key: "evenements", label: "Événements" },
+  { href: "/notifications", key: "notifications", label: "Notifications" },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   const [me, setMe] = useState<Me>(null);
   const [isTest, setIsTest] = useState(false);
+  const [unread, setUnread] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -39,6 +44,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .then((d) => { setMe(d.user || null); setIsTest(!!d.isTest); })
       .catch(() => {});
   }, []);
+
+  // Compteur de notifications non lues, rafraîchi à chaque navigation.
+  useEffect(() => {
+    fetch("/app/api/notifications")
+      .then((r) => r.json())
+      .then((d) => setUnread(d.unread || 0))
+      .catch(() => {});
+  }, [pathname]);
 
   const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "Invité";
   const niveau = clampNiveau(me?.niveau ?? 1);
@@ -74,6 +87,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Link key={n.key} href={n.href} className={pathname === n.href ? "active" : ""}>
               {ICONS[n.key]}
               <span>{n.label}</span>
+              {n.key === "notifications" && unread > 0 && (
+                <i
+                  aria-label={`${unread} non lues`}
+                  style={{
+                    marginLeft: "auto", background: "#F27B6A", color: "#fff", borderRadius: 999,
+                    fontSize: 11, fontWeight: 700, fontStyle: "normal", minWidth: 18, height: 18,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px",
+                  }}
+                >
+                  {unread > 9 ? "9+" : unread}
+                </i>
+              )}
             </Link>
           ))}
         </nav>

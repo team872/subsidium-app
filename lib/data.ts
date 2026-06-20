@@ -100,24 +100,57 @@ export async function createIdea(d: { cat: string; color: string; title: string;
   return rows[0];
 }
 
-export type CommentDTO = { id: number; author: string; body: string; created_at: string };
+export type AttachmentMeta = { id: number; filename: string; mime: string; size: number; isImage: boolean };
+export type CommentDTO = { id: number; author: string; body: string; created_at: string; attachment: AttachmentMeta | null };
+
+function rowToComment(r: any): CommentDTO {
+  const attachment: AttachmentMeta | null = r.att_id
+    ? { id: r.att_id, filename: r.att_name, mime: r.att_mime, size: r.att_size, isImage: String(r.att_mime || "").startsWith("image/") }
+    : null;
+  return { id: r.id, author: r.author, body: r.body, created_at: r.created_at, attachment };
+}
 
 export async function listComments(ideaId: number): Promise<CommentDTO[]> {
   await ensureDb();
-  return query<CommentDTO>(
-    `SELECT id, author, body, created_at FROM comments WHERE idea_id=$1 ORDER BY created_at ASC`,
+  const rows = await query<any>(
+    `SELECT c.id, c.author, c.body, c.created_at,
+            a.id AS att_id, a.filename AS att_name, a.mime AS att_mime, a.size AS att_size
+     FROM comments c LEFT JOIN attachments a ON a.comment_id = c.id
+     WHERE c.idea_id=$1 ORDER BY c.created_at ASC`,
     [ideaId]
   );
+  return rows.map(rowToComment);
 }
 
-export async function addComment(ideaId: number, userId: number, author: string, body: string): Promise<CommentDTO> {
+export type NewFile = { filename: string; mime: string; data: Buffer };
+
+export async function addComment(
+  ideaId: number, userId: number, author: string, body: string, file?: NewFile | null
+): Promise<CommentDTO> {
   await ensureDb();
-  const rows = await query<CommentDTO>(
+  const rows = await query<any>(
     `INSERT INTO comments (idea_id,user_id,author,body) VALUES ($1,$2,$3,$4)
      RETURNING id, author, body, created_at`,
     [ideaId, userId, author, body]
   );
-  return rows[0];
+  const c = rows[0];
+  let attachment: AttachmentMeta | null = null;
+  if (file) {
+    const a = await query<any>(
+      `INSERT INTO attachments (comment_id,filename,mime,size,data) VALUES ($1,$2,$3,$4,$5)
+       RETURNING id, filename, mime, size`,
+      [c.id, file.filename, file.mime, file.data.length, file.data]
+    );
+    attachment = { id: a[0].id, filename: a[0].filename, mime: a[0].mime, size: a[0].size, isImage: file.mime.startsWith("image/") };
+  }
+  return { id: c.id, author: c.author, body: c.body, created_at: c.created_at, attachment };
+}
+
+export async function getAttachment(id: number): Promise<{ filename: string; mime: string; size: number; data: Buffer } | null> {
+  await ensureDb();
+  const rows = await query<any>(`SELECT filename, mime, size, data FROM attachments WHERE id=$1`, [id]);
+  if (!rows[0]) return null;
+  return { filename: rows[0].filename, mime: rows[0].mime, size: rows[0].size, data: rows[0].data };
 }
 
 export async function isFollowing(userId: number, ideaId: number): Promise<boolean> {
@@ -148,4 +181,49 @@ export async function userStats(userId: number): Promise<{ suivies: number; emis
   const a = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM follows WHERE user_id=$1`, [userId]);
   const b = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM ideas WHERE author_id=$1`, [userId]);
   return { suivies: a[0].n, emises: b[0].n };
+}
+
+/* ---------- Notifications in-app ---------- */
+
+export type NotificationDTO = {
+  id: number; type: string; idea_id: number | null; actor: string | null;
+  message: string; read: boolean; created_at: string;
+};
+
+// Notifie les abonnés d'une idée (et son auteur) lors d'une nouvelle participation,
+// en excluant l'auteur du message.
+export async function notifyNewComment(ideaId: number, actorId: number, actorName: string, commentId: number): Promise<void> {
+  await ensureDb();
+  const idea = await query<{ title: string; author_id: number | null }>(
+    `SELECT title, author_id FROM ideas WHERE id=$1`, [ideaId]
+  );
+  if (!idea[0]) return;
+  const followers = await query<{ user_id: number }>(`SELECT user_id FROM follows WHERE idea_id=$1`, [ideaId]);
+  const ids = new Set<number>(followers.map((r) => r.user_id));
+  if (idea[0].author_id) ids.add(idea[0].author_id);
+  ids.delete(actorId);
+  if (ids.size === 0) return;
+  const message = `${actorName} a participé à la discussion sur « ${idea[0].title} »`;
+  for (const uid of ids) {
+    await query(
+      `INSERT INTO notifications (user_id,type,idea_id,comment_id,actor,message) VALUES ($1,'comment',$2,$3,$4,$5)`,
+      [uid, ideaId, commentId, actorName, message]
+    );
+  }
+}
+
+export async function listNotifications(userId: number, limit = 30): Promise<{ items: NotificationDTO[]; unread: number }> {
+  await ensureDb();
+  const items = await query<NotificationDTO>(
+    `SELECT id, type, idea_id, actor, message, read, created_at
+     FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit]
+  );
+  const u = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM notifications WHERE user_id=$1 AND read=FALSE`, [userId]);
+  return { items, unread: u[0].n };
+}
+
+export async function markNotificationsRead(userId: number): Promise<void> {
+  await ensureDb();
+  await query(`UPDATE notifications SET read=TRUE WHERE user_id=$1 AND read=FALSE`, [userId]);
 }
