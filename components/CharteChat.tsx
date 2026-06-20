@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import "./AutoEvalChat.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -9,7 +10,7 @@ const API = "/app/api/eval";
 const OPENER = "Bonjour, je souhaite adhérer à la charte d'engagement Subsidium.";
 
 // Entretien d'adhésion à la Charte (agent « charte » = Charte Light, agent1).
-// Verdict structuré renvoyé par le scoring de l'agent : result.verdict === "valide".
+// La validation est re-vérifiée côté serveur via /api/progression/charte (l'agent rescore).
 export default function CharteChat() {
   const [history, setHistory] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -65,24 +66,20 @@ export default function CharteChat() {
     setError("");
     const transcript = history.map((m) => (m.role === "user" ? "Visiteur: " : "Agent: ") + m.content).join("\n");
     try {
-      const r = await fetch(`${API}/score`, {
+      // L'endpoint re-vérifie l'entretien via l'agent (autoritatif) et persiste si valide.
+      const r = await fetch("/app/api/progression/charte", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent: "charte", transcript }),
+        body: JSON.stringify({ transcript }),
       });
       const d = await r.json();
       if (d.error) { setError(d.error); setBusy(false); return; }
       const rr = d.result || {};
-      const valide = rr.verdict === "valide";
       setVerdict({
-        valide,
+        valide: !!d.valide,
         retest: rr.retest_autorise_le || rr.retest || undefined,
         motifs: rr.motifs || rr.reserves || rr.raisons || [],
       });
-      // Persistance en base : on enregistre l'adhésion validée (passage N1 conditionné au paiement).
-      if (valide) {
-        fetch("/app/api/progression/charte", { method: "POST" }).catch(() => {});
-      }
     } catch {
       setError("Validation impossible pour le moment.");
     }
@@ -103,6 +100,11 @@ export default function CharteChat() {
         )}
         {!verdict.valide && verdict.retest && (
           <p className="eval-reserves">Nouvel essai possible à partir du {verdict.retest}.</p>
+        )}
+        {verdict.valide && (
+          <Link href="/paiement" className="btn btn-coral" style={{ marginTop: 8, display: "inline-block" }}>
+            Finaliser mon adhésion (paiement)
+          </Link>
         )}
       </div>
     );
