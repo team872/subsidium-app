@@ -5,11 +5,11 @@ import { useNiveau } from "@/components/useNiveau";
 import { prochaineEtape, NIVEAUX } from "@/lib/niveau";
 
 // Bandeau contextuel de progression dans le parcours, selon le niveau effectif.
-// Visiteur -> Adhérer à la Charte ; Refondateur -> Auto-évaluation ; Initiateur+ -> rien.
+// Visiteur -> Charte ; Visiteur (charte ok) -> Paiement ; Refondateur -> Auto-évaluation.
 export default function ParcoursCTA() {
-  const { rang, ready } = useNiveau();
+  const { rang, charteValidee, paye, ready } = useNiveau();
   if (!ready) return null;
-  const etape = prochaineEtape(rang);
+  const etape = prochaineEtape(rang, charteValidee, paye);
   if (!etape) return null;
 
   return (

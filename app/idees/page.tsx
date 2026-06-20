@@ -27,9 +27,9 @@ export default function IdeesPage() {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const { rang } = useNiveau();
+  const { rang, charteValidee, paye } = useNiveau();
   const peutProposer = peutProposerIdee(rang);
-  const etape = prochaineEtape(rang);
+  const etape = prochaineEtape(rang, charteValidee, paye);
 
   useEffect(() => {
     fetch("/app/api/ideas")

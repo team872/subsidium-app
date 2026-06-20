@@ -25,9 +25,20 @@ export const peutProposerIdee = (rang: number) => rang >= 1; // Refondateur+
 export const peutInteragir = (rang: number) => rang >= 1; // suivre / commenter
 export const peutPorterInitiative = (rang: number) => rang >= 2; // Initiateur+
 
-/** Prochaine étape de progression à mettre en avant selon le niveau. */
-export function prochaineEtape(rang: number): { label: string; href: string; hint: string } | null {
-  if (rang <= 0) return { label: "Adhérer à la Charte", href: "/charte", hint: "Première étape pour devenir Refondateur et agir." };
-  if (rang === 1) return { label: "Passer l'auto-évaluation", href: "/auto-evaluation", hint: "Évaluez votre engagement pour viser le niveau Initiateur." };
+/** Prochaine étape de progression à mettre en avant selon le niveau et l'état d'adhésion. */
+export function prochaineEtape(
+  rang: number,
+  charteValidee?: boolean,
+  paye?: boolean
+): { label: string; href: string; hint: string } | null {
+  if (rang <= 0) {
+    if (!charteValidee)
+      return { label: "Adhérer à la Charte", href: "/charte", hint: "Première étape pour devenir Refondateur et agir." };
+    if (!paye)
+      return { label: "Finaliser mon adhésion", href: "/paiement", hint: "Dernière étape pour devenir Refondateur : régler votre adhésion." };
+    return null;
+  }
+  if (rang === 1)
+    return { label: "Passer l'auto-évaluation", href: "/auto-evaluation", hint: "Évaluez votre engagement pour viser le niveau Initiateur." };
   return null;
 }

@@ -7,6 +7,8 @@ import { clampNiveau } from "@/lib/niveau";
 // `niveau`, déjà surchargé pour les comptes test via l'aperçu de la barre MODE TEST).
 export function useNiveau() {
   const [rang, setRang] = useState(1); // optimiste (membre) le temps du chargement
+  const [charteValidee, setCharteValidee] = useState(false);
+  const [paye, setPaye] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -17,11 +19,13 @@ export function useNiveau() {
         if (!on) return;
         const u = d.user;
         setRang(u ? clampNiveau(u.niveau) : 0);
+        setCharteValidee(!!u?.charte_validee);
+        setPaye(!!u?.paye);
         setReady(true);
       })
       .catch(() => on && setReady(true));
     return () => { on = false; };
   }, []);
 
-  return { rang, ready };
+  return { rang, charteValidee, paye, ready };
 }
