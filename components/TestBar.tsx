@@ -1,15 +1,15 @@
 "use client";
 
 import React from "react";
+import { NIVEAUX, clampNiveau } from "@/lib/niveau";
 
 // Barre de navigation TEST (aperçu rendu-seul). Rendue uniquement si compte test.
-// Les fleches changent le niveau AFFICHE via un cookie (aucune ecriture en base).
-const PALIERS = ["Visiteur", "Refondateur", "Initiateur", "Refondateur Certifié", "Ambassadeur"];
+// Les fleches changent le niveau AFFICHE via un cookie d'index (aucune ecriture en base).
 const COOKIE = "sub_preview";
 
-function setPreview(val: string | null) {
-  if (val == null) document.cookie = COOKIE + "=; path=/app; max-age=0";
-  else document.cookie = COOKIE + "=" + encodeURIComponent(val) + "; path=/app; max-age=86400";
+function setPreview(index: number | null) {
+  if (index == null) document.cookie = COOKIE + "=; path=/app; max-age=0";
+  else document.cookie = COOKIE + "=" + index + "; path=/app; max-age=86400";
   window.location.reload();
 }
 
@@ -35,12 +35,12 @@ const Chevron = ({ dir }: { dir: "left" | "right" }) => (
   </svg>
 );
 
-export default function TestBar({ palier, isTest }: { palier: string | null; isTest: boolean }) {
+export default function TestBar({ niveau, isTest }: { niveau: number; isTest: boolean }) {
   if (!isTest) return null;
-  const idx = Math.max(0, PALIERS.indexOf(palier || "Visiteur"));
+  const idx = clampNiveau(niveau);
   const go = (delta: number) => {
-    const ni = Math.min(PALIERS.length - 1, Math.max(0, idx + delta));
-    if (ni !== idx) setPreview(PALIERS[ni]);
+    const ni = clampNiveau(idx + delta);
+    if (ni !== idx) setPreview(ni);
   };
   return (
     <div
@@ -69,9 +69,9 @@ export default function TestBar({ palier, isTest }: { palier: string | null; isT
         <Chevron dir="left" />
       </button>
       <span style={{ minWidth: 168, textAlign: "center", fontWeight: 700 }}>
-        {PALIERS[idx]} <span style={{ opacity: 0.6, fontWeight: 400 }}>· N{idx}</span>
+        {NIVEAUX[idx]} <span style={{ opacity: 0.6, fontWeight: 400 }}>· N{idx}</span>
       </span>
-      <button onClick={() => go(1)} disabled={idx >= PALIERS.length - 1} style={btnStyle(idx >= PALIERS.length - 1)} aria-label="Niveau suivant" title="Niveau suivant">
+      <button onClick={() => go(1)} disabled={idx >= NIVEAUX.length - 1} style={btnStyle(idx >= NIVEAUX.length - 1)} aria-label="Niveau suivant" title="Niveau suivant">
         <Chevron dir="right" />
       </button>
       <button

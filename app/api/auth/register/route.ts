@@ -20,11 +20,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Un compte existe déjà avec cet e-mail." }, { status: 409 });
     }
     const hash = await hashPassword(password);
+    // Inscription complète (charte signée à l'étape 4 + adhésion) : l'utilisateur
+    // entre au moins Refondateur (1), Initiateur (2) si le badge N2 est obtenu.
+    const niveau = b.badge_n2 ? 2 : 1;
     const rows = await query<{ id: number }>(
-      `INSERT INTO users (email,password_hash,nom,prenom,situation,ville,pays,palier,score,badge_n2)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      `INSERT INTO users (email,password_hash,nom,prenom,situation,ville,pays,palier,score,badge_n2,niveau,charte_validee,paye)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,TRUE,TRUE) RETURNING id`,
       [email, hash, b.nom ?? null, b.prenom ?? null, b.situation ?? null, b.ville ?? null, b.pays ?? null,
-       b.palier ?? null, b.score ?? null, !!b.badge_n2]
+       b.palier ?? null, b.score ?? null, !!b.badge_n2, niveau]
     );
     const id = rows[0].id;
     const token = await signSession(id);

@@ -1,24 +1,17 @@
 import { cookies } from "next/headers";
 import type { PublicUser } from "./data";
+import { clampNiveau } from "./niveau";
 
 /**
- * MODE TEST — aperçu "rendu seul" du parcours, réservé aux comptes de test.
+ * MODE TEST — aperçu « rendu seul » du parcours, réservé aux comptes de test.
  *
- * - Aucune écriture en base : on surcharge seulement le `palier` (et `badge_n2`/`score`
- *   pour la cohérence d'affichage) DANS LA RÉPONSE de l'API, en fonction d'un cookie.
+ * - Aucune écriture en base : on surcharge seulement le `niveau` DANS LA RÉPONSE de
+ *   l'API, en fonction d'un cookie (l'index de niveau 0..4).
  * - Activé uniquement pour les emails listés dans la variable d'env `TEST_ACCOUNTS`
  *   (séparés par des virgules). Vide => personne n'est en mode test => barre invisible.
- * - La vraie progression (Charte+paiement -> N1, Auto-éval -> N2, admin -> N3/N4) reste
- *   l'unique chemin pour les vrais utilisateurs : ce module n'y touche pas.
+ * - La vraie progression (charte+paiement → N1, badge → N2, admin → N3/N4) reste l'unique
+ *   chemin pour les vrais utilisateurs : ce module n'y touche pas.
  */
-export const PALIERS = [
-  "Visiteur",
-  "Refondateur",
-  "Initiateur",
-  "Refondateur Certifié",
-  "Ambassadeur",
-] as const;
-
 export const PREVIEW_COOKIE = "sub_preview";
 
 export function isTestAccount(email: string | null | undefined): boolean {
@@ -30,27 +23,20 @@ export function isTestAccount(email: string | null | undefined): boolean {
   return list.includes(email.toLowerCase());
 }
 
-/**
- * Applique l'aperçu de niveau si (compte test) ET (cookie de prévisualisation valide).
- * Retourne l'utilisateur (éventuellement surchargé) + le flag `isTest` pour l'UI.
- */
+/** Surcharge le `niveau` affiché si (compte test) ET (cookie de prévisualisation valide). */
 export function withPreview(user: PublicUser | null): { user: PublicUser | null; isTest: boolean } {
   if (!user) return { user, isTest: false };
   const test = isTestAccount(user.email);
   if (!test) return { user, isTest: false };
 
-  let val = "";
+  let raw = "";
   try {
-    val = decodeURIComponent(cookies().get(PREVIEW_COOKIE)?.value || "");
+    raw = cookies().get(PREVIEW_COOKIE)?.value || "";
   } catch {
-    val = "";
+    raw = "";
   }
-  const idx = (PALIERS as readonly string[]).indexOf(val);
-  if (idx < 0) return { user, isTest: true }; // pas d'aperçu actif : on garde le vrai palier
+  if (raw === "") return { user, isTest: true }; // pas d'aperçu actif : vrai niveau
 
-  const hasBadge = idx >= 2; // Initiateur et au-delà
-  return {
-    user: { ...user, palier: PALIERS[idx], badge_n2: hasBadge, score: hasBadge ? 45 : null },
-    isTest: true,
-  };
+  const n = clampNiveau(Number(raw));
+  return { user: { ...user, niveau: n }, isTest: true };
 }

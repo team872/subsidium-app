@@ -2,10 +2,8 @@
 //
 // Échelle : Visiteur 0 → Refondateur 1 → Initiateur 2 → Refondateur Certifié 3 → Ambassadeur 4.
 //
-// Le niveau est dérivé du `palier` quand celui-ci est un libellé de maturité
-// (cas piloté par la barre MODE TEST, et futur modèle réel), sinon de `badge_n2`.
-// IMPORTANT : un membre réel inscrit (palier d'auto-éval type « Acteur », pas de badge)
-// est considéré Refondateur (1) par défaut — pour NE PAS verrouiller l'accès existant.
+// La source de vérité est désormais la colonne `niveau` en base (cf. lib/progression.ts).
+// Le client lit simplement `user.niveau` ; la barre MODE TEST le surcharge pour l'aperçu.
 
 export const NIVEAUX = [
   "Visiteur",
@@ -17,12 +15,10 @@ export const NIVEAUX = [
 
 export type Niveau = (typeof NIVEAUX)[number];
 
-/** Rang 0..4 à partir du palier + badge. `null`/absence d'utilisateur => Visiteur (0). */
-export function rangMaturite(palier: string | null | undefined, badgeN2?: boolean): number {
-  const i = (NIVEAUX as readonly string[]).indexOf(palier || "");
-  if (i >= 0) return i;
-  if (badgeN2) return 2; // Initiateur
-  return 1; // membre inscrit par défaut = Refondateur (on ne casse pas l'existant)
+/** Borne un niveau dans 0..4. */
+export function clampNiveau(n: number | null | undefined): number {
+  const v = Math.round(Number(n ?? 0));
+  return Math.max(0, Math.min(NIVEAUX.length - 1, Number.isFinite(v) ? v : 0));
 }
 
 export const peutProposerIdee = (rang: number) => rang >= 1; // Refondateur+

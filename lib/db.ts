@@ -56,6 +56,15 @@ async function init(): Promise<void> {
       PRIMARY KEY (user_id, idea_id)
     );
     ALTER TABLE ideas ADD COLUMN IF NOT EXISTS location TEXT;
+
+    -- Progression du parcours (source de vérité du niveau de maturité 0..4)
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS niveau INT DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS charte_validee BOOLEAN DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS paye BOOLEAN DEFAULT FALSE;
+    -- Backfill (idempotent) : les membres ayant déjà un palier d'auto-éval (hors Visiteur)
+    -- sont au moins Refondateur (1), Initiateur (2) s'ils ont le badge N2.
+    UPDATE users SET niveau = CASE WHEN badge_n2 THEN 2 ELSE 1 END
+      WHERE niveau = 0 AND palier IS NOT NULL AND palier <> 'Visiteur';
   `);
 
   const { rows } = await p.query(`SELECT COUNT(*)::int AS n FROM ideas`);

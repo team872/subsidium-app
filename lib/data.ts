@@ -1,9 +1,11 @@
 import { ensureDb, query } from "./db";
+import { recomputeNiveau } from "./progression";
 
 export type PublicUser = {
   id: number; email: string; nom: string | null; prenom: string | null;
   situation: string | null; ville: string | null; pays: string | null;
   palier: string | null; score: number | null; badge_n2: boolean;
+  niveau: number; charte_validee: boolean; paye: boolean;
   created_at: string;
 };
 
@@ -15,7 +17,7 @@ export function displayName(u: { prenom: string | null; nom: string | null; emai
 export async function getUserPublic(id: number): Promise<PublicUser | null> {
   await ensureDb();
   const rows = await query<PublicUser>(
-    `SELECT id,email,nom,prenom,situation,ville,pays,palier,score,badge_n2,created_at FROM users WHERE id=$1`,
+    `SELECT id,email,nom,prenom,situation,ville,pays,palier,score,badge_n2,niveau,charte_validee,paye,created_at FROM users WHERE id=$1`,
     [id]
   );
   return rows[0] ?? null;
@@ -37,6 +39,31 @@ export async function updateUser(
     [id, f.nom ?? null, f.prenom ?? null, f.situation ?? null, f.ville ?? null, f.pays ?? null]
   );
   return getUserPublic(id);
+}
+
+// Applique une transition de progression (charte / paiement) puis recalcule le niveau.
+export async function applyProgression(
+  id: number,
+  patch: { charte_validee?: boolean; paye?: boolean }
+): Promise<PublicUser | null> {
+  await ensureDb();
+  await query(
+    `UPDATE users SET
+       charte_validee = COALESCE($2, charte_validee),
+       paye = COALESCE($3, paye)
+     WHERE id = $1`,
+    [id, patch.charte_validee ?? null, patch.paye ?? null]
+  );
+  const u = await getUserPublic(id);
+  if (!u) return null;
+  const n = recomputeNiveau({
+    niveau: u.niveau, charte_validee: u.charte_validee, paye: u.paye, badge_n2: u.badge_n2,
+  });
+  if (n !== u.niveau) {
+    await query(`UPDATE users SET niveau = $2 WHERE id = $1`, [id, n]);
+    return getUserPublic(id);
+  }
+  return u;
 }
 
 export type IdeaDTO = {
