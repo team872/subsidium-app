@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Relais serveur vers l'agent d'auto-évaluation existant (conteneur subsidium-test).
-// L'appel se fait de conteneur à conteneur sur le réseau Docker partagé : aucun
-// identifiant n'est nécessaire (le basic-auth Traefik ne s'applique qu'au bord public).
+// Relais serveur vers l'agent (conteneur subsidium-test). L'appel se fait de conteneur
+// à conteneur sur le réseau Docker partagé : aucun identifiant n'est nécessaire (le
+// basic-auth Traefik ne s'applique qu'au bord public). `agent` = "eval" | "charte".
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const r = await fetch(`${BASE}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agent: "eval", messages: Array.isArray(body.messages) ? body.messages : [] }),
+      body: JSON.stringify({ agent: body.agent === "charte" ? "charte" : "eval", messages: Array.isArray(body.messages) ? body.messages : [] }),
       signal: ctrl.signal,
     });
     const data = await r.json().catch(() => ({ error: "Réponse illisible de l'évaluateur." }));

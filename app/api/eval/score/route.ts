@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Relais serveur vers le scoring autoritatif de l'agent (recalcul /60, palier,
-// anti-triche et octroi du badge N2 côté serveur agent).
+// anti-triche et octroi du badge N2 — ou verdict d'adhésion pour la charte —
+// côté serveur agent). `agent` = "eval" | "charte".
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     const r = await fetch(`${BASE}/api/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agent: "eval", transcript: String(body.transcript || "") }),
+      body: JSON.stringify({ agent: body.agent === "charte" ? "charte" : "eval", transcript: String(body.transcript || "") }),
       signal: ctrl.signal,
     });
     const data = await r.json().catch(() => ({ error: "Réponse illisible de l'évaluateur." }));
