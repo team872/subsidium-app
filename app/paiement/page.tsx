@@ -7,7 +7,8 @@ import AppShell from "@/components/AppShell";
 // Paiement SIMULÉ (provisoire) pour tester le passage Visiteur -> Refondateur.
 // Aucune transaction réelle : le bouton appelle /api/progression/pay (paye=true).
 // Le vrai Stripe sera branché ici plus tard.
-const MONTANT = "12 €"; // cotisation annuelle (placeholder)
+// Textes et montant alignés sur l'AVP (écran « Une contribution pour faire vivre la démarche »).
+const MONTANT = "20,00 €";
 
 export default function PaiementPage() {
   const [busy, setBusy] = useState(false);
@@ -31,11 +32,11 @@ export default function PaiementPage() {
   return (
     <AppShell>
       <div className="board-head">
-        <h1>Adhésion Subsidium</h1>
+        <h1>Une contribution pour faire vivre la démarche</h1>
       </div>
 
-      <div style={{ maxWidth: 520 }}>
-        <div style={{ display: "inline-block", background: "#FBE7DC", color: "#5E4A73", fontSize: 12, fontWeight: 700, letterSpacing: ".04em", borderRadius: 999, padding: "4px 12px", marginBottom: 14 }}>
+      <div style={{ maxWidth: 560 }}>
+        <div style={{ display: "inline-block", background: "#FBE7DC", color: "#5E4A73", fontSize: 12, fontWeight: 700, letterSpacing: ".04em", borderRadius: 999, padding: "4px 12px", marginBottom: 16 }}>
           PAIEMENT SIMULÉ · TEST
         </div>
 
@@ -43,7 +44,7 @@ export default function PaiementPage() {
           <div style={{ border: "1px solid #EBD9CD", borderRadius: 18, padding: 24, background: "#fff" }}>
             <h2 style={{ marginTop: 0, color: "#372646" }}>Paiement confirmé</h2>
             <p style={{ color: "#5E4A73" }}>
-              Votre adhésion est réglée (simulation). Si votre charte est validée, vous êtes désormais
+              Votre contribution est enregistrée (simulation). Si votre charte est validée, vous êtes désormais
               <b> Refondateur</b> et pouvez exprimer vos idées.
             </p>
             <Link href="/accueil" className="btn btn-coral" style={{ display: "inline-block", marginTop: 6 }}>
@@ -51,10 +52,23 @@ export default function PaiementPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ border: "1px solid #EBD9CD", borderRadius: 18, padding: 24, background: "#fff" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderBottom: "1px solid #F0E6DD", paddingBottom: 12, marginBottom: 16 }}>
-              <span style={{ color: "#372646", fontWeight: 600 }}>Cotisation annuelle — passage Refondateur</span>
-              <span style={{ color: "#372646", fontWeight: 800, fontSize: 18 }}>{MONTANT}</span>
+          <div style={{ border: "1px solid #EBD9CD", borderRadius: 18, padding: "26px 24px", background: "#fff" }}>
+            <h2 style={{ margin: "0 0 10px", color: "#372646", fontSize: 18, textAlign: "center" }}>
+              S&apos;engager concrètement dans la démarche
+            </h2>
+            <p style={{ color: "#5E4A73", lineHeight: 1.6, margin: "0 0 10px" }}>
+              La cotisation annuelle est une étape essentielle pour poursuivre votre engagement au sein de la
+              communauté. Elle permet de faire vivre la plateforme, de garantir son indépendance et de soutenir
+              le développement d&apos;outils dédiés à la coopération citoyenne et à la transformation éthique.
+            </p>
+            <p style={{ color: "#5E4A73", lineHeight: 1.6, margin: "0 0 18px" }}>
+              En contribuant, vous participez activement à un projet collectif fondé sur des valeurs partagées et
+              rendez possible l&apos;émergence de projets citoyens durables, ouverts et responsables.
+            </p>
+
+            <div style={{ textAlign: "center", background: "#FCF6F0", border: "1px solid #F0E6DD", borderRadius: 14, padding: "16px 12px", marginBottom: 18 }}>
+              <div style={{ color: "#372646", fontWeight: 800, fontSize: 26 }}>{MONTANT}</div>
+              <div style={{ color: "#9C919E", fontSize: 13 }}>Annuel</div>
             </div>
 
             <label style={lbl}>Numéro de carte</label>
@@ -73,10 +87,10 @@ export default function PaiementPage() {
             {error && <p className="msg" style={{ marginTop: 10 }}>{error}</p>}
 
             <button type="button" className="btn btn-coral" onClick={pay} disabled={busy} style={{ width: "100%", marginTop: 16 }}>
-              {busy ? "Traitement…" : `Payer ${MONTANT} (simulation)`}
+              {busy ? "Traitement…" : "Procéder au paiement"}
             </button>
             <p style={{ color: "#9C919E", fontSize: 12.5, marginTop: 10, textAlign: "center" }}>
-              Aucune transaction réelle. Carte de test pré-remplie. Stripe réel à brancher ultérieurement.
+              Paiement sécurisé · Aucune transaction réelle (carte de test). Stripe réel à brancher ultérieurement.
             </p>
           </div>
         )}
