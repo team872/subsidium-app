@@ -19,6 +19,13 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   title: "SUBSIDIUM — Là où vos projets prennent vie",
   description: "Le mouvement citoyen de l'action.",
+  // Site en préparation : on interdit l'indexation par les moteurs.
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false },
+  },
 };
 
 export default function RootLayout({
