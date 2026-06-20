@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -16,6 +16,18 @@ const fmt = (iso: string) => {
   }
 };
 
+const ALLOWED = ["image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf"];
+const MAX_BYTES = 5 * 1024 * 1024;
+
+function fileToB64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] || "");
+    r.onerror = () => reject(new Error("read"));
+    r.readAsDataURL(file);
+  });
+}
+
 export default function IdeaDetailPage() {
   const params = useParams();
   const id = Number(params?.id);
@@ -25,7 +37,10 @@ export default function IdeaDetailPage() {
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch(`/app/api/ideas/${id}`)
@@ -50,22 +65,51 @@ export default function IdeaDetailPage() {
     setFollowing(!!d.following);
   }
 
-  async function send() {
-    const t = draft.trim();
-    if (!t || !following) return;
-    setError("");
-    const r = await fetch(`/app/api/ideas/${id}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: t }),
-    });
-    const d = await r.json();
-    if (!r.ok) {
-      setError(d.error || "Envoi impossible.");
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // permet de re-sélectionner le même fichier
+    if (!f) return;
+    if (!ALLOWED.includes(f.type)) {
+      setError("Format non autorisé : images (PNG, JPG, GIF, WebP) ou PDF.");
       return;
     }
-    setComments((c) => [...c, d.comment]);
-    setDraft("");
+    if (f.size > MAX_BYTES) {
+      setError("Fichier trop volumineux (max 5 Mo).");
+      return;
+    }
+    setError("");
+    setFile(f);
+  }
+
+  async function send() {
+    const t = draft.trim();
+    if ((!t && !file) || !following || sending) return;
+    setError("");
+    setSending(true);
+    try {
+      let payloadFile: { name: string; mime: string; dataB64: string } | undefined;
+      if (file) {
+        const dataB64 = await fileToB64(file);
+        payloadFile = { name: file.name, mime: file.type, dataB64 };
+      }
+      const r = await fetch(`/app/api/ideas/${id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: t, file: payloadFile }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setError(d.error || "Envoi impossible.");
+        setSending(false);
+        return;
+      }
+      setComments((c) => [...c, d.comment]);
+      setDraft("");
+      setFile(null);
+    } catch {
+      setError("Envoi impossible.");
+    }
+    setSending(false);
   }
 
   if (loading) {
@@ -133,21 +177,59 @@ export default function IdeaDetailPage() {
                   <span className="av">{initials(c.author)}</span>
                   <div className="ct">
                     <div className="top"><span className="nm">{c.author}</span><span className="tm">{fmt(c.created_at)}</span></div>
-                    <p>{c.body}</p>
+                    {c.body && <p>{c.body}</p>}
+                    {c.attachment && (c.attachment.isImage ? (
+                      <a className="att-img" href={`/app/api/attachments/${c.attachment.id}`} target="_blank" rel="noreferrer">
+                        <img src={`/app/api/attachments/${c.attachment.id}`} alt={c.attachment.filename} />
+                      </a>
+                    ) : (
+                      <a className="att-doc" href={`/app/api/attachments/${c.attachment.id}`} target="_blank" rel="noreferrer">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                        <span>{c.attachment.filename}</span>
+                      </a>
+                    ))}
                   </div>
                 </div>
               ))
             )}
           </div>
-          <div className="composer">
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-              placeholder={following ? "Écrire un message…" : "Suivez l'idée pour écrire un message"}
-              disabled={!following}
-            />
-            <button className="btn btn-coral" onClick={send} disabled={!following || !draft.trim()}>Envoyer</button>
+
+          <div className="composer-wrap">
+            {file && (
+              <div className="att-chip">
+                <span className="att-chip-name">📎 {file.name}</span>
+                <button type="button" onClick={() => setFile(null)} aria-label="Retirer la pièce jointe">×</button>
+              </div>
+            )}
+            <div className="composer">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+                onChange={onPick}
+                hidden
+              />
+              <button
+                type="button"
+                className="attach-btn"
+                onClick={() => fileRef.current?.click()}
+                disabled={!following}
+                title="Joindre une image ou un PDF (max 5 Mo)"
+                aria-label="Joindre un fichier"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+              </button>
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+                placeholder={following ? "Écrire un message…" : "Suivez l'idée pour écrire un message"}
+                disabled={!following}
+              />
+              <button className="btn btn-coral" onClick={send} disabled={!following || sending || (!draft.trim() && !file)}>
+                {sending ? "…" : "Envoyer"}
+              </button>
+            </div>
           </div>
         </section>
       </div>
