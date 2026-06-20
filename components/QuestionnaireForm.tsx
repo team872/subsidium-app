@@ -77,7 +77,9 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
         <div className="eval-bar"><div className="eval-bar-fill" style={{ width: `${pct}%` }} /></div>
       </div>
 
-      <p style={{ color: "#5E4A73", margin: "10px 2px 6px", fontStyle: "italic" }}>{dim.intro}</p>
+      {dim.intro && (
+        <p style={{ color: "#5E4A73", margin: "10px 2px 6px", fontStyle: "italic" }}>{dim.intro}</p>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, padding: "6px 2px 4px" }}>
         {dim.statements.map((st, j) => {

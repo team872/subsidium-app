@@ -9,7 +9,7 @@ const PALIER_DESC: Record<string, string> = {
   Spectateur: "Vous observez le réel avec lucidité. La prochaine étape : oser une première action concrète.",
   Acteur: "Vous agissez déjà concrètement. Consolidez la régularité et l'impact de votre engagement.",
   Transformateur: "Votre engagement est mûr et structurant : vous êtes prêt à porter des initiatives.",
-  "Bâtisseur": "Engagement exemplaire et durable : vous inspirez et transmettez autour de vous.",
+  Bâtisseur: "Engagement exemplaire et durable : vous inspirez et transmettez autour de vous.",
 };
 
 export default function EvalResult({ summary }: { summary: EvalSummary }) {
@@ -20,7 +20,7 @@ export default function EvalResult({ summary }: { summary: EvalSummary }) {
   return (
     <div className="eval-result">
       <p style={{ color: "#5E4A73", margin: "0 0 4px", fontWeight: 600 }}>
-        Merci — votre auto-évaluation est terminée.
+        Merci d&apos;avoir pris le temps de réaliser l&apos;auto-évaluation éthique !
       </p>
       <span className="eval-palier">{summary.palier}</span>
       {desc && <p style={{ color: "#372646", maxWidth: 560, margin: "0 auto 6px" }}>{desc}</p>}
@@ -42,7 +42,7 @@ export default function EvalResult({ summary }: { summary: EvalSummary }) {
           <b>Ce que cela signifie.</b> Ce résultat n'est pas un jugement, mais un point de départ. Votre
           <b> palier</b> reflète votre maturité citoyenne aujourd'hui. Le <b>score /60</b> agrège vos
           réponses sur les dimensions éthiques (dignité, bien commun, responsabilité, subsidiarité,
-          solidarité, participation, sobriété, transmission), et l'<b>indice de fiabilité</b> mesure la
+          justice, sobriété, participation, transmission), et l'<b>indice de fiabilité</b> mesure la
           cohérence de vos réponses (et, pour l'entretien, leur appui sur des exemples concrets).
         </p>
         <p style={{ margin: 0 }}>
