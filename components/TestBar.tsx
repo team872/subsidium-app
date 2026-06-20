@@ -42,6 +42,10 @@ export default function TestBar({ niveau, isTest }: { niveau: number; isTest: bo
     const ni = clampNiveau(idx + delta);
     if (ni !== idx) setPreview(ni);
   };
+  async function resetParcours() {
+    await fetch("/app/api/test/reset", { method: "POST" }).catch(() => {});
+    setPreview(null); // efface l'aperçu + recharge : retour à Visiteur (niveau réel remis à 0)
+  }
   return (
     <div
       style={{
@@ -80,6 +84,13 @@ export default function TestBar({ niveau, isTest }: { niveau: number; isTest: bo
         title="Revenir au niveau réel du compte"
       >
         Réel
+      </button>
+      <button
+        onClick={resetParcours}
+        style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.4)", borderRadius: 999, padding: "4px 10px", fontSize: 11.5, cursor: "pointer", opacity: 0.9 }}
+        title="Réinitialiser le parcours et repartir de Visiteur (compte test)"
+      >
+        ↺ Réinitialiser
       </button>
     </div>
   );

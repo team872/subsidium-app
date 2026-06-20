@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import EvalResult from "@/components/EvalResult";
 import "./AutoEvalChat.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -120,28 +121,7 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
   }
 
   /* ----- résultat ----- */
-  if (result) {
-    const fiab = Math.round((result.indice_fiabilite || 0) * 100);
-    return (
-      <div className="eval-result">
-        <span className="eval-palier">{result.palier}</span>
-        <div className="eval-kpis">
-          <div className="kpi"><b>{result.total}</b><small>/ 60</small></div>
-          <div className="kpi"><b>{fiab}%</b><small>fiabilité</small></div>
-          <div className={`kpi ${result.badge_n2_octroyable ? "ok" : "no"}`}>
-            <b>{result.badge_n2_octroyable ? "Oui" : "Non"}</b><small>badge Initiateur N2</small>
-          </div>
-        </div>
-        {result.reserves.length > 0 && (
-          <p className="eval-reserves">Points de vigilance : {result.reserves.join(" · ")}</p>
-        )}
-        <p className="eval-note">
-          Votre entretien a été évalué par l'agent SUBSIDIUM. Vous pouvez maintenant passer à la
-          signature de la charte d'engagement.
-        </p>
-      </div>
-    );
-  }
+  if (result) return <EvalResult summary={result} />;
 
   /* ----- introduction ----- */
   if (!started) {
@@ -214,7 +194,7 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
         </button>
       </div>
       {asked >= TARGET_QUESTIONS && (
-        <p className="eval-hint">Vous avez parcouru les grandes dimensions : vous pouvez conclure et obtenir votre palier.</p>
+        <p className="eval-hint">Vous avez parcouru les grands domaines : vous pouvez conclure et obtenir votre palier.</p>
       )}
       <button type="button" className="btn btn-ghost eval-finish" onClick={finish} disabled={busy || history.length < 2}>
         Terminer l'entretien et obtenir mon palier

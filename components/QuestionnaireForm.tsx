@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { DIMENSIONS, SCALE } from "@/lib/autoEval";
 import type { EvalSummary } from "@/components/AutoEvalChat";
+import EvalResult from "@/components/EvalResult";
 import "./AutoEvalChat.css";
 
 // Questionnaire guidé (version « formulaire » de l'AVP) : un écran par dimension,
@@ -62,25 +63,7 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
     setBusy(false);
   }
 
-  if (result) {
-    const fiab = Math.round((result.indice_fiabilite || 0) * 100);
-    return (
-      <div className="eval-result">
-        <span className="eval-palier">{result.palier}</span>
-        <div className="eval-kpis">
-          <div className="kpi"><b>{result.total}</b><small>/ 60</small></div>
-          <div className="kpi"><b>{fiab}%</b><small>fiabilité</small></div>
-          <div className={`kpi ${result.badge_n2_octroyable ? "ok" : "no"}`}>
-            <b>{result.badge_n2_octroyable ? "Oui" : "Non"}</b><small>badge Initiateur N2</small>
-          </div>
-        </div>
-        <p className="eval-note">
-          Résultat calculé à partir de vos réponses au questionnaire, avec les mêmes seuils que
-          l'évaluation accompagnée par l'agent.
-        </p>
-      </div>
-    );
-  }
+  if (result) return <EvalResult summary={result} />;
 
   const pct = ((idx + (dimComplete ? 1 : 0)) / total) * 100;
 
