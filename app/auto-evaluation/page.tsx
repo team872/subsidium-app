@@ -1,7 +1,7 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
-import AutoEvalChat from "@/components/AutoEvalChat";
+import EvalFlow from "@/components/EvalFlow";
 
 export default function AutoEvaluationPage() {
   return (
@@ -10,11 +10,11 @@ export default function AutoEvaluationPage() {
         <h1>Auto-évaluation</h1>
       </div>
       <p style={{ maxWidth: 720, color: "#5E4A73", margin: "0 0 18px" }}>
-        Deuxième étape : passer de Refondateur à Initiateur. L'agent évalue votre engagement sur les
-        grandes dimensions éthiques et détermine votre palier.
+        Deuxième étape : passer de Refondateur à Initiateur. Choisissez votre format — un questionnaire
+        guidé, ou un entretien accompagné avec un agent SUBSIDIUM — pour déterminer votre palier.
       </p>
-      <div style={{ maxWidth: 760 }}>
-        <AutoEvalChat onResult={() => {}} />
+      <div style={{ maxWidth: 820 }}>
+        <EvalFlow onResult={() => {}} />
       </div>
     </AppShell>
   );
