@@ -9,10 +9,18 @@ type Msg = { role: "user" | "assistant"; content: string };
 const API = "/app/api/eval";
 const OPENER = "Bonjour, je souhaite adhérer à la charte d'engagement Subsidium.";
 
-// L'agent termine ses messages par un marqueur interne « QUESTION: » (la question est juste avant) ;
-// on le retire de l'affichage.
-function cleanReply(text: string): string {
-  return text.replace(/\n?\s*QUESTION\s*:\s*$/i, "").trim();
+// L'agent place sa question après un marqueur « QUESTION : » — on l'isole pour la mettre en valeur
+// et ne pas afficher le marqueur interne (même convention que l'entretien d'auto-évaluation).
+function splitQuestion(text: string) {
+  const re = /QUESTION\s*:/gi;
+  let last = -1;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) last = m.index;
+  if (last < 0) return { intro: text.trim(), question: "" };
+  return {
+    intro: text.slice(0, last).trim(),
+    question: text.slice(last).replace(/^QUESTION\s*:\s*/i, "").trim(),
+  };
 }
 
 // Entretien d'adhésion à la Charte (agent « charte » = Charte Light, agent1).
@@ -142,10 +150,13 @@ export default function CharteChat() {
               </div>
             );
           }
+          const { intro, question } = splitQuestion(m.content);
           return (
             <div className="bub-row bot" key={i}>
               <span className="bub-label">Agent Charte SUBSIDIUM</span>
-              <div className="bub bot">{cleanReply(m.content)}</div>
+              {intro && <div className="bub bot">{intro}</div>}
+              {question && <div className="bub-q">{question}</div>}
+              {!intro && !question && <div className="bub bot">{m.content}</div>}
             </div>
           );
         })}
