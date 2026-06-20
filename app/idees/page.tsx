@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import IdeaForm from "@/components/IdeaForm";
+import ParcoursCTA from "@/components/ParcoursCTA";
+import { useNiveau } from "@/components/useNiveau";
+import { peutProposerIdee, prochaineEtape } from "@/lib/niveau";
 import { CATEGORIES } from "@/lib/feed";
 import type { IdeaDTO } from "@/lib/data";
 import "@/components/MemberBoards.css";
@@ -24,6 +27,9 @@ export default function IdeesPage() {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const { rang } = useNiveau();
+  const peutProposer = peutProposerIdee(rang);
+  const etape = prochaineEtape(rang);
 
   useEffect(() => {
     fetch("/app/api/ideas")
@@ -51,8 +57,22 @@ export default function IdeesPage() {
     <AppShell>
       <div className="board-head">
         <h1>Idées citoyennes</h1>
-        <button className="btn btn-coral" onClick={() => setShowForm(true)}>Exprimer une idée</button>
+        {peutProposer ? (
+          <button className="btn btn-coral" onClick={() => setShowForm(true)}>Exprimer une idée</button>
+        ) : (
+          <Link
+            href={etape?.href || "/charte"}
+            className="btn btn-coral"
+            title="Réservé aux Refondateurs — adhérez à la Charte pour exprimer vos idées"
+            style={{ opacity: 0.92, display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            Exprimer une idée
+          </Link>
+        )}
       </div>
+
+      <ParcoursCTA />
 
       {showForm && (
         <IdeaForm
