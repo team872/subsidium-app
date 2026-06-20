@@ -73,11 +73,16 @@ export default function CharteChat() {
       const d = await r.json();
       if (d.error) { setError(d.error); setBusy(false); return; }
       const rr = d.result || {};
+      const valide = rr.verdict === "valide";
       setVerdict({
-        valide: rr.verdict === "valide",
+        valide,
         retest: rr.retest_autorise_le || rr.retest || undefined,
         motifs: rr.motifs || rr.reserves || rr.raisons || [],
       });
+      // Persistance en base : on enregistre l'adhésion validée (passage N1 conditionné au paiement).
+      if (valide) {
+        fetch("/app/api/progression/charte", { method: "POST" }).catch(() => {});
+      }
     } catch {
       setError("Validation impossible pour le moment.");
     }

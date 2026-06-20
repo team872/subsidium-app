@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import TestBar from "@/components/TestBar";
+import { NIVEAUX, clampNiveau } from "@/lib/niveau";
 
-type Me = { prenom: string | null; nom: string | null; email: string; palier: string | null } | null;
+type Me = { prenom: string | null; nom: string | null; email: string; niveau: number | null } | null;
 
 const ICONS: Record<string, JSX.Element> = {
   accueil: (
@@ -40,7 +41,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "Invité";
-  const role = me?.palier || "Refondateur";
+  const niveau = clampNiveau(me?.niveau ?? 1);
+  const role = NIVEAUX[niveau];
 
   async function logout() {
     await fetch("/app/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -95,7 +97,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="content">{children}</main>
-      <TestBar palier={role} isTest={isTest} />
+      <TestBar niveau={niveau} isTest={isTest} />
     </div>
   );
 }
