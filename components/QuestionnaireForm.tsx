@@ -7,16 +7,16 @@ import "./AutoEvalChat.css";
 
 // Questionnaire guidé (version « formulaire » de l'AVP) : un écran par dimension,
 // chaque énoncé noté sur l'échelle Jamais / Parfois / Souvent / Toujours (0..3).
-// Scoring déterministe ramené sur /60, sans appel à l'agent (résultat indicatif).
-
-const PALIER_PAR_SCORE = (s: number) =>
-  s >= 51 ? "Bâtisseur" : s >= 41 ? "Transformateur" : s >= 21 ? "Acteur" : "Spectateur";
+// Le scoring est calculé côté serveur (/api/eval/form-score), avec les MÊMES seuils
+// que l'agent conversationnel — palier/badge unifiés entre les deux chemins.
 
 export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSummary) => void }) {
   const total = DIMENSIONS.length;
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<EvalSummary | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const dim = DIMENSIONS[idx];
   const dimComplete = useMemo(
@@ -28,30 +28,38 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
     setAnswers((a) => ({ ...a, [`${idx}-${j}`]: value }));
   }
 
-  function compute(): EvalSummary {
-    let sum = 0;
-    let count = 0;
+  async function finish() {
+    setBusy(true);
+    setError("");
+    const list: number[] = [];
     DIMENSIONS.forEach((d, di) =>
       d.statements.forEach((_, j) => {
         const v = answers[`${di}-${j}`];
-        if (v !== undefined) { sum += v; count += 1; }
+        if (v !== undefined) list.push(v);
       })
     );
-    const max = count * (SCALE.length - 1); // 3 points max par énoncé
-    const score60 = max > 0 ? Math.round((sum / max) * 60) : 0;
-    return {
-      total: score60,
-      palier: PALIER_PAR_SCORE(score60),
-      indice_fiabilite: 1,
-      badge_n2_octroyable: score60 >= 41,
-      reserves: [],
-    };
-  }
-
-  function finish() {
-    const s = compute();
-    setResult(s);
-    onResult?.(s);
+    try {
+      const r = await fetch("/app/api/eval/form-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: list }),
+      });
+      const d = await r.json();
+      if (d.error) { setError(d.error); setBusy(false); return; }
+      const rr = d.result || {};
+      const s: EvalSummary = {
+        total: rr.total,
+        palier: rr.palier,
+        indice_fiabilite: rr.indice_fiabilite ?? 1,
+        badge_n2_octroyable: !!rr.badge_n2_octroyable,
+        reserves: rr.reserves || [],
+      };
+      setResult(s);
+      onResult?.(s);
+    } catch {
+      setError("Calcul du résultat impossible pour le moment.");
+    }
+    setBusy(false);
   }
 
   if (result) {
@@ -67,8 +75,8 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
           </div>
         </div>
         <p className="eval-note">
-          Résultat indicatif calculé à partir de vos réponses au questionnaire. Vous pouvez aussi
-          réaliser l'entretien avec l'agent pour une évaluation accompagnée.
+          Résultat calculé à partir de vos réponses au questionnaire, avec les mêmes seuils que
+          l'évaluation accompagnée par l'agent.
         </p>
       </div>
     );
@@ -86,7 +94,9 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
         <div className="eval-bar"><div className="eval-bar-fill" style={{ width: `${pct}%` }} /></div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 18, padding: "8px 2px 4px" }}>
+      <p style={{ color: "#5E4A73", margin: "10px 2px 6px", fontStyle: "italic" }}>{dim.intro}</p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, padding: "6px 2px 4px" }}>
         {dim.statements.map((st, j) => {
           const current = answers[`${idx}-${j}`];
           return (
@@ -121,12 +131,14 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
         })}
       </div>
 
+      {error && <p className="msg" style={{ marginTop: 10 }}>{error}</p>}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18, gap: 12 }}>
         <button
           type="button"
           className="btn btn-ghost"
           onClick={() => setIdx((i) => Math.max(0, i - 1))}
-          disabled={idx === 0}
+          disabled={idx === 0 || busy}
         >
           Précédent
         </button>
@@ -135,8 +147,8 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
             Suivant
           </button>
         ) : (
-          <button type="button" className="btn btn-coral" onClick={finish} disabled={!dimComplete}>
-            Voir mon résultat
+          <button type="button" className="btn btn-coral" onClick={finish} disabled={!dimComplete || busy}>
+            {busy ? "Calcul…" : "Voir mon résultat"}
           </button>
         )}
       </div>
