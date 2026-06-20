@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { getUserPublic, updateUser } from "@/lib/data";
+import { withPreview } from "@/lib/testmode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +9,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const uid = await getUserId();
   if (!uid) return NextResponse.json({ user: null });
-  return NextResponse.json({ user: await getUserPublic(uid) });
+  const { user, isTest } = withPreview(await getUserPublic(uid));
+  return NextResponse.json({ user, isTest });
 }
 
 export async function PATCH(req: NextRequest) {

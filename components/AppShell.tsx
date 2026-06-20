@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import TestBar from "@/components/TestBar";
 
 type Me = { prenom: string | null; nom: string | null; email: string; palier: string | null } | null;
 
@@ -27,11 +28,15 @@ const NAV = [
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   const [me, setMe] = useState<Me>(null);
+  const [isTest, setIsTest] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/app/api/auth/me").then((r) => r.json()).then((d) => setMe(d.user || null)).catch(() => {});
+    fetch("/app/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => { setMe(d.user || null); setIsTest(!!d.isTest); })
+      .catch(() => {});
   }, []);
 
   const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "Invité";
@@ -90,6 +95,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="content">{children}</main>
+      <TestBar palier={role} isTest={isTest} />
     </div>
   );
 }
