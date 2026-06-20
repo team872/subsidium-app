@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
 import Stepper, { STEPS } from "@/components/Stepper";
-import AutoEvalChat, { EvalSummary } from "@/components/AutoEvalChat";
+import type { EvalSummary } from "@/components/AutoEvalChat";
+import EvalFlow from "@/components/EvalFlow";
 
 type Perso = { nom: string; prenom: string; situation: string; ville: string; pays: string };
 
@@ -19,7 +20,7 @@ export default function InscriptionPage() {
   const [pwd2, setPwd2] = useState("");
   // Étape 2
   const [perso, setPerso] = useState<Perso>({ nom: "", prenom: "", situation: "", ville: "", pays: "" });
-  // Étape 3 : entretien d'auto-évaluation mené par l'agent SUBSIDIUM
+  // Étape 3 : auto-évaluation (questionnaire ou agent, au choix)
   const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
   // Étape 4
   const [accepted, setAccepted] = useState(false);
@@ -205,15 +206,15 @@ export default function InscriptionPage() {
         </>
       )}
 
-      {/* ---------- Étape 3 : auto-évaluation menée par l'agent ---------- */}
+      {/* ---------- Étape 3 : auto-évaluation au choix ---------- */}
       {step === 2 && (
         <>
           <h1 className="h-form">Mon auto-évaluation éthique</h1>
           <p className="sub">
-            Un entretien d'accompagnement avec un agent SUBSIDIUM, qui évalue votre maturité citoyenne
-            sur les 20 dimensions de la grille et vous attribue un palier.
+            Évaluez votre maturité citoyenne sur les dimensions de la grille éthique. Choisissez votre
+            format : un questionnaire guidé, ou un entretien accompagné avec un agent SUBSIDIUM.
           </p>
-          <AutoEvalChat onResult={setEvalSummary} />
+          <EvalFlow onResult={setEvalSummary} />
         </>
       )}
 
