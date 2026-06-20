@@ -9,6 +9,12 @@ type Msg = { role: "user" | "assistant"; content: string };
 const API = "/app/api/eval";
 const OPENER = "Bonjour, je souhaite adhérer à la charte d'engagement Subsidium.";
 
+// L'agent termine ses messages par un marqueur interne « QUESTION: » (la question est juste avant) ;
+// on le retire de l'affichage.
+function cleanReply(text: string): string {
+  return text.replace(/\n?\s*QUESTION\s*:\s*$/i, "").trim();
+}
+
 // Entretien d'adhésion à la Charte (agent « charte » = Charte Light, agent1).
 // La validation est re-vérifiée côté serveur via /api/progression/charte (l'agent rescore).
 export default function CharteChat() {
@@ -139,7 +145,7 @@ export default function CharteChat() {
           return (
             <div className="bub-row bot" key={i}>
               <span className="bub-label">Agent Charte SUBSIDIUM</span>
-              <div className="bub bot">{m.content}</div>
+              <div className="bub bot">{cleanReply(m.content)}</div>
             </div>
           );
         })}
