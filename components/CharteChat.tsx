@@ -129,9 +129,9 @@ export default function CharteChat() {
       <div className="eval-intro">
         <p>
           La charte d'engagement Subsidium n'est pas une formalité : un agent vous accompagne dans un
-          court entretien pour vérifier que vous comprenez et adhérez aux principes (dignité, bien commun,
-          responsabilité, subsidiarité). Répondez avec vos propres mots. Vous devenez Refondateur une fois
-          l'adhésion validée et le paiement effectué.
+          court entretien pour vérifier que vous comprenez et adhérez aux quatre engagements de la charte
+          (Vérité, Respect, Responsabilité, Espérance). Répondez avec vos propres mots. Vous devenez
+          Refondateur une fois l'adhésion validée et le paiement effectué.
         </p>
         <button type="button" className="btn btn-coral" onClick={start}>Commencer l'entretien d'adhésion</button>
       </div>
