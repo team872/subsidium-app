@@ -15,6 +15,9 @@ const ICONS: Record<string, JSX.Element> = {
   idees: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6" /><path d="M10 21h4" /><path d="M12 3a6 6 0 0 1 4 10.5c-.7.7-1 1.3-1 2.5H9c0-1.2-.3-1.8-1-2.5A6 6 0 0 1 12 3z" /></svg>
   ),
+  missions: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" /></svg>
+  ),
   evenements: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></svg>
   ),
@@ -24,10 +27,11 @@ const ICONS: Record<string, JSX.Element> = {
 };
 
 const NAV = [
-  { href: "/accueil", key: "accueil", label: "Accueil" },
-  { href: "/idees", key: "idees", label: "Idées" },
-  { href: "/evenements", key: "evenements", label: "Événements" },
-  { href: "/notifications", key: "notifications", label: "Notifications" },
+  { href: "/accueil", key: "accueil", label: "Accueil", minNiveau: 0 },
+  { href: "/idees", key: "idees", label: "Idées", minNiveau: 0 },
+  { href: "/missions", key: "missions", label: "Missions", minNiveau: 2 },
+  { href: "/evenements", key: "evenements", label: "Événements", minNiveau: 0 },
+  { href: "/notifications", key: "notifications", label: "Notifications", minNiveau: 0 },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -56,6 +60,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "Invité";
   const niveau = clampNiveau(me?.niveau ?? 1);
   const role = NIVEAUX[niveau];
+  const nav = NAV.filter((n) => niveau >= (n.minNiveau ?? 0));
 
   async function logout() {
     await fetch("/app/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -83,7 +88,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="nav">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <Link key={n.key} href={n.href} className={pathname === n.href ? "active" : ""}>
               {ICONS[n.key]}
               <span>{n.label}</span>
