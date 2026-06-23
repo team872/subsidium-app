@@ -27,6 +27,9 @@ const ICONS: Record<string, JSX.Element> = {
   notifications: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
   ),
+  admin: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+  ),
 };
 
 const NAV = [
@@ -36,12 +39,14 @@ const NAV = [
   { href: "/marche", key: "marche", label: "Market-place", minNiveau: 2 },
   { href: "/evenements", key: "evenements", label: "Événements", minNiveau: 0 },
   { href: "/notifications", key: "notifications", label: "Notifications", minNiveau: 0 },
+  { href: "/admin", key: "admin", label: "Administration", adminOnly: true },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   const [me, setMe] = useState<Me>(null);
   const [isTest, setIsTest] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [unread, setUnread] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
@@ -49,7 +54,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetch("/app/api/auth/me")
       .then((r) => r.json())
-      .then((d) => { setMe(d.user || null); setIsTest(!!d.isTest); })
+      .then((d) => { setMe(d.user || null); setIsTest(!!d.isTest); setIsAdmin(!!d.isAdmin); })
       .catch(() => {});
   }, []);
 
@@ -63,7 +68,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "Invité";
   const niveau = clampNiveau(me?.niveau ?? 1);
   const role = NIVEAUX[niveau];
-  const nav = NAV.filter((n) => niveau >= (n.minNiveau ?? 0));
+  const nav = NAV.filter((n) => (n.adminOnly ? isAdmin : niveau >= (n.minNiveau ?? 0)));
 
   async function logout() {
     await fetch("/app/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -117,7 +122,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <span className="av" />
               <span className="meta">
                 <b>{name}</b>
-                <small>{role}</small>
+                <small>{isAdmin ? "Administrateur" : role}</small>
               </span>
             </Link>
             {me && (
