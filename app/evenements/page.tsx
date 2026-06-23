@@ -29,17 +29,34 @@ function EventCard({ ev }: { ev: EventDTO }) {
   );
 }
 
+// Carte compacte pour la colonne de la vue Carte (pas de bandeau photo).
+function EventRow({ ev }: { ev: EventDTO }) {
+  return (
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid #EBD9CD", borderRadius: 14, background: "#fff", padding: "12px 14px" }}>
+      <div style={{ flexShrink: 0, width: 48, borderRadius: 10, backgroundImage: ev.grad, color: "#fff", textAlign: "center", padding: "8px 0", lineHeight: 1.1 }}>
+        <div style={{ fontWeight: 800, fontSize: 18 }}>{ev.day}</div>
+        <div style={{ fontSize: 10.5, textTransform: "uppercase" }}>{ev.month}</div>
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{ev.tag}</span>
+        <h3 style={{ margin: "2px 0 4px", color: "#372646", fontSize: 15 }}>{ev.title}</h3>
+        <p style={{ color: "#5E4A73", fontSize: 13, margin: 0, lineHeight: 1.45 }}>{ev.desc}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function EvenementsPage() {
   const [items, setItems] = useState<EventDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("Tout afficher");
   const [view, setView] = useState<"liste" | "carte">("liste");
-  const [points, setPoints] = useState<any[]>([]);
+  const [allPoints, setAllPoints] = useState<any[]>([]);
 
   useEffect(() => {
     fetch("/app/api/events").then((r) => r.json()).then((d) => setItems(d.events || [])).catch(() => setItems([])).finally(() => setLoading(false));
-    fetch("/app/api/events/geo").then((r) => r.json()).then((d) => setPoints(d.points || [])).catch(() => {});
+    fetch("/app/api/events/geo").then((r) => r.json()).then((d) => setAllPoints(d.points || [])).catch(() => {});
   }, []);
 
   const list = useMemo(() => {
@@ -52,6 +69,11 @@ export default function EvenementsPage() {
       return true;
     });
   }, [items, query, tag]);
+
+  const points = useMemo(() => {
+    const ids = new Set(list.map((x) => x.id));
+    return allPoints.filter((p) => ids.has(p.id));
+  }, [allPoints, list]);
 
   return (
     <AppShell>
@@ -77,8 +99,8 @@ export default function EvenementsPage() {
         <p className="board-empty">Aucune actualité ne correspond à votre recherche pour le moment.</p>
       ) : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 12, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((ev) => <EventCard key={ev.id} ev={ev} />)}
+          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
+            {list.map((ev) => <EventRow key={ev.id} ev={ev} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />

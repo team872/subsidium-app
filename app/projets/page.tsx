@@ -40,7 +40,7 @@ export default function ProjetsPage() {
   const [niveau, setNiveau] = useState(0);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"liste" | "carte">("liste");
-  const [points, setPoints] = useState<any[]>([]);
+  const [allPoints, setAllPoints] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: "", theme: "", lieu: "", desc: "", prive: false });
   const [busy, setBusy] = useState(false);
@@ -53,7 +53,7 @@ export default function ProjetsPage() {
   useEffect(() => { load(tab); }, [tab]);
   useEffect(() => {
     fetch("/app/api/auth/me").then((r) => r.json()).then((d) => setNiveau(d.user?.niveau ?? 0)).catch(() => {});
-    fetch("/app/api/projets/geo").then((r) => r.json()).then((d) => setPoints(d.points || [])).catch(() => {});
+    fetch("/app/api/projets/geo").then((r) => r.json()).then((d) => setAllPoints(d.points || [])).catch(() => {});
   }, []);
 
   const canCreate = niveau >= 2;
@@ -61,6 +61,11 @@ export default function ProjetsPage() {
     if (!q) return true; const s = q.toLowerCase();
     return p.title.toLowerCase().includes(s) || (p.lieu || "").toLowerCase().includes(s) || (p.theme || "").toLowerCase().includes(s);
   }), [projets, q]);
+
+  const points = useMemo(() => {
+    const ids = new Set(list.map((x) => x.id));
+    return allPoints.filter((p) => ids.has(p.id));
+  }, [allPoints, list]);
 
   async function create() {
     if (busy) return;

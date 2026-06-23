@@ -40,7 +40,7 @@ export default function OrganisationsPage() {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [view, setView] = useState<"liste" | "carte">("liste");
-  const [points, setPoints] = useState<any[]>([]);
+  const [allPoints, setAllPoints] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", type: "Association", region: "", desc: "", adresse: "", telephone: "", email: "", site: "" });
   const [busy, setBusy] = useState(false);
@@ -49,7 +49,7 @@ export default function OrganisationsPage() {
   useEffect(() => {
     fetch("/app/api/organisations").then((r) => r.json()).then((d) => setOrgs(d.organisations || [])).catch(() => {}).finally(() => setLoading(false));
     fetch("/app/api/organisations/mine").then((r) => r.json()).then((d) => setMine(d.organisations || [])).catch(() => {});
-    fetch("/app/api/organisations/geo").then((r) => r.json()).then((d) => setPoints(d.points || [])).catch(() => {});
+    fetch("/app/api/organisations/geo").then((r) => r.json()).then((d) => setAllPoints(d.points || [])).catch(() => {});
   }, []);
 
   const list = useMemo(() => orgs.filter((o) => {
@@ -57,6 +57,11 @@ export default function OrganisationsPage() {
     if (q) { const s = q.toLowerCase(); if (!o.name.toLowerCase().includes(s) && !(o.adresse || "").toLowerCase().includes(s) && !(o.region || "").toLowerCase().includes(s)) return false; }
     return true;
   }), [orgs, q, type]);
+
+  const points = useMemo(() => {
+    const ids = new Set(list.map((x) => x.id));
+    return allPoints.filter((p) => ids.has(p.id));
+  }, [allPoints, list]);
 
   async function create() {
     if (busy) return;
