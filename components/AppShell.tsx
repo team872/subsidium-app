@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import TestBar from "@/components/TestBar";
+import Mascotte from "@/components/Mascotte";
 import { NIVEAUX, clampNiveau } from "@/lib/niveau";
 
 type Me = { prenom: string | null; nom: string | null; email: string; niveau: number | null } | null;
@@ -156,6 +157,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="content">{children}</main>
       <TestBar niveau={niveau} isTest={isTest} />
+      <Mascotte />
     </div>
   );
 }
