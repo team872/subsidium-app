@@ -10,6 +10,7 @@ type Member = {
   niveau: number; badge_n2: boolean; charte_validee: boolean; paye: boolean; created_at: string;
 };
 type Org = { id: number; name: string; type: string; region: string | null; labellisee: boolean };
+type Cert = { id: number; user_id: number; nom: string | null; prenom: string | null; email: string; niveau: number; created_at: string };
 
 const chip = (on: boolean): React.CSSProperties => ({
   fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "2px 8px", marginRight: 6,
@@ -17,12 +18,15 @@ const chip = (on: boolean): React.CSSProperties => ({
 });
 const th: React.CSSProperties = { padding: "10px 14px", fontSize: 13, fontWeight: 800 };
 const td: React.CSSProperties = { padding: "12px 14px", verticalAlign: "top" };
+const tableStyle: React.CSSProperties = { width: "100%", borderCollapse: "collapse", background: "#fff", border: "1px solid #EBD9CD", borderRadius: 14 };
+const headRow: React.CSSProperties = { textAlign: "left", color: "#372646", background: "#EFE8F2" };
 
 export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"membres" | "organisations">("membres");
+  const [tab, setTab] = useState<"membres" | "organisations" | "certifications">("membres");
   const [members, setMembers] = useState<Member[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
+  const [certs, setCerts] = useState<Cert[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -36,6 +40,7 @@ export default function AdminPage() {
           Promise.all([
             fetch("/app/api/admin/members").then((r) => r.json()).then((d) => setMembers(d.members || [])).catch(() => {}),
             fetch("/app/api/admin/organisations").then((r) => r.json()).then((d) => setOrgs(d.organisations || [])).catch(() => {}),
+            fetch("/app/api/admin/certifications").then((r) => r.json()).then((d) => setCerts(d.certifications || [])).catch(() => {}),
           ]).finally(() => setLoading(false));
         } else setLoading(false);
       })
@@ -59,6 +64,20 @@ export default function AdminPage() {
     } catch {}
     setSaving(null);
   }
+  async function decideCert(id: number, approve: boolean) {
+    setSaving("c" + id);
+    try {
+      const r = await fetch(`/app/api/admin/certifications/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approve }) });
+      if (r.ok) {
+        setCerts((cs) => cs.filter((c) => c.id !== id));
+        if (approve) {
+          const m = await fetch("/app/api/admin/members").then((x) => x.json());
+          setMembers(m.members || []);
+        }
+      }
+    } catch {}
+    setSaving(null);
+  }
 
   const mlist = useMemo(() => members.filter((m) => {
     if (!q) return true; const s = q.toLowerCase();
@@ -77,14 +96,17 @@ export default function AdminPage() {
       <div className="board-tabs">
         <button className={tab === "membres" ? "on" : ""} onClick={() => setTab("membres")}>Membres</button>
         <button className={tab === "organisations" ? "on" : ""} onClick={() => setTab("organisations")}>Organisations</button>
+        <button className={tab === "certifications" ? "on" : ""} onClick={() => setTab("certifications")}>Certifications{certs.length > 0 ? ` (${certs.length})` : ""}</button>
       </div>
 
-      <div className="board-tools">
-        <div className="board-search">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === "membres" ? "Rechercher un membre…" : "Rechercher une organisation…"} />
+      {(tab === "membres" || tab === "organisations") && (
+        <div className="board-tools">
+          <div className="board-search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === "membres" ? "Rechercher un membre…" : "Rechercher une organisation…"} />
+          </div>
         </div>
-      </div>
+      )}
 
       {loading ? <p className="board-empty">Chargement…</p> : tab === "membres" ? (
         <>
@@ -92,8 +114,8 @@ export default function AdminPage() {
             Promouvez un Initiateur en <b>Refondateur Certifié (N3)</b> ou <b>Ambassadeur (N4)</b>. Les niveaux 0→2 s'obtiennent normalement par le parcours.
           </p>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", border: "1px solid #EBD9CD", borderRadius: 14 }}>
-              <thead><tr style={{ textAlign: "left", color: "#372646", background: "#EFE8F2" }}>
+            <table style={tableStyle}>
+              <thead><tr style={headRow}>
                 <th style={th}>Membre</th><th style={th}>Niveau actuel</th><th style={th}>État parcours</th><th style={th}>Promouvoir / valider</th>
               </tr></thead>
               <tbody>
@@ -113,16 +135,14 @@ export default function AdminPage() {
             </table>
           </div>
         </>
-      ) : (
+      ) : tab === "organisations" ? (
         <>
           <p style={{ color: "#5E4A73", maxWidth: 760, margin: "0 0 14px", lineHeight: 1.6 }}>
-            Validez les organisations : une organisation <b>labellisée</b> apparaît dans l'annuaire public. Les organisations créées par les membres sont en attente jusqu'à votre validation.
+            Validez les organisations : une organisation <b>labellisée</b> apparaît dans l'annuaire public.
           </p>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", border: "1px solid #EBD9CD", borderRadius: 14 }}>
-              <thead><tr style={{ textAlign: "left", color: "#372646", background: "#EFE8F2" }}>
-                <th style={th}>Organisation</th><th style={th}>Statut</th><th style={th}>Action</th>
-              </tr></thead>
+            <table style={tableStyle}>
+              <thead><tr style={headRow}><th style={th}>Organisation</th><th style={th}>Statut</th><th style={th}>Action</th></tr></thead>
               <tbody>
                 {olist.map((o) => (
                   <tr key={o.id} style={{ borderTop: "1px solid #F0E6DD" }}>
@@ -136,6 +156,32 @@ export default function AdminPage() {
                   </tr>
                 ))}
                 {olist.length === 0 && <tr><td style={td} colSpan={3}><span style={{ color: "#9C919E" }}>Aucune organisation.</span></td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <>
+          <p style={{ color: "#5E4A73", maxWidth: 760, margin: "0 0 14px", lineHeight: 1.6 }}>
+            Demandes de <b>certification Leader</b> (Refondateur Certifié N3) issues du parcours. Approuver promeut le membre au niveau N3.
+          </p>
+          <div style={{ overflowX: "auto" }}>
+            <table style={tableStyle}>
+              <thead><tr style={headRow}><th style={th}>Membre</th><th style={th}>Niveau actuel</th><th style={th}>Décision</th></tr></thead>
+              <tbody>
+                {certs.map((c) => (
+                  <tr key={c.id} style={{ borderTop: "1px solid #F0E6DD" }}>
+                    <td style={td}><div style={{ fontWeight: 700, color: "#372646" }}>{`${c.prenom || ""} ${c.nom || ""}`.trim() || "—"}</div><div style={{ color: "#9C919E", fontSize: 13 }}>{c.email}</div></td>
+                    <td style={td}><span style={{ fontWeight: 700, color: "#372646" }}>{NIVEAUX[c.niveau]}</span><span style={{ color: "#9C919E" }}> · N{c.niveau}</span></td>
+                    <td style={td}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button className="btn btn-coral" disabled={saving === "c" + c.id} onClick={() => decideCert(c.id, true)}>Certifier (N3)</button>
+                        <button className="btn btn-ghost" disabled={saving === "c" + c.id} onClick={() => decideCert(c.id, false)}>Refuser</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {certs.length === 0 && <tr><td style={td} colSpan={3}><span style={{ color: "#9C919E" }}>Aucune demande de certification en attente.</span></td></tr>}
               </tbody>
             </table>
           </div>
