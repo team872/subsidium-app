@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { listIdeas, createIdea, getUserPublic, displayName } from "@/lib/data";
 import { CAT_COLOR } from "@/lib/feed";
+import { geocode } from "@/lib/geo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,9 @@ export async function POST(req: NextRequest) {
     const u = await getUserPublic(uid);
     const author = u ? displayName(u) : "Citoyen";
     const color = CAT_COLOR[cat] || "#E8A98F";
-    const idea = await createIdea({ cat, color, title, desc, author, authorId: uid, location });
+    // Géocodage best-effort du lieu pour la vue carte (dégradation silencieuse).
+    const geo = location ? await geocode(location) : null;
+    const idea = await createIdea({ cat, color, title, desc, author, authorId: uid, location, lat: geo?.lat ?? null, lon: geo?.lon ?? null });
     return NextResponse.json({ idea });
   } catch {
     return NextResponse.json({ error: "Création de l'idée impossible." }, { status: 500 });

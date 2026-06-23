@@ -22,6 +22,13 @@ export function ensureDb(): Promise<void> {
   return ready;
 }
 
+// Villes pour géolocaliser les idées de démo (réparties sur la France).
+const DEMO_CITIES: [number, number, string][] = [
+  [45.757, 4.832, "Lyon"], [43.604, 1.444, "Toulouse"], [48.857, 2.352, "Paris"],
+  [43.296, 5.369, "Marseille"], [44.838, -0.579, "Bordeaux"], [47.218, -1.554, "Nantes"],
+  [50.629, 3.057, "Lille"], [48.583, 7.745, "Strasbourg"],
+];
+
 async function init(): Promise<void> {
   const p = getPool();
   await p.query(`
@@ -73,6 +80,9 @@ async function init(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read);
     ALTER TABLE ideas ADD COLUMN IF NOT EXISTS location TEXT;
+    -- Géolocalisation des idées (vue carte)
+    ALTER TABLE ideas ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+    ALTER TABLE ideas ADD COLUMN IF NOT EXISTS lon DOUBLE PRECISION;
 
     -- Progression du parcours (source de vérité du niveau de maturité 0..4)
     ALTER TABLE users ADD COLUMN IF NOT EXISTS niveau INT DEFAULT 0;
@@ -99,5 +109,15 @@ async function init(): Promise<void> {
         [ev.tag, ev.title, ev.desc, ev.day, ev.month, ev.grad]
       );
     }
+  }
+
+  // Backfill géoloc (idempotent) : assigne des coordonnées démo aux idées sans lat,
+  // réparties sur plusieurs villes françaises, avec un léger décalage pour ne pas superposer.
+  const miss = await p.query<{ id: number }>(`SELECT id FROM ideas WHERE lat IS NULL ORDER BY id`);
+  for (let i = 0; i < miss.rows.length; i++) {
+    const c = DEMO_CITIES[i % DEMO_CITIES.length];
+    const lat = c[0] + (Math.random() - 0.5) * 0.06;
+    const lon = c[1] + (Math.random() - 0.5) * 0.06;
+    await p.query(`UPDATE ideas SET lat=$2, lon=$3, location=COALESCE(location,$4) WHERE id=$1`, [miss.rows[i].id, lat, lon, c[2]]);
   }
 }
