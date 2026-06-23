@@ -2,76 +2,98 @@
 
 import { useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
+import { useLang } from "@/components/LangProvider";
 import "@/components/MemberBoards.css";
 
 type QA = { q: string; a: string };
-type Cat = { key: string; titre: string; items: QA[] };
+type Cat = { titre: string; items: QA[] };
+type Content = { title: string; subtitle: string; search: string; noResult: string; cats: Cat[] };
 
-const CATEGORIES: Cat[] = [
-  {
-    key: "compte", titre: "Compte & connexion",
-    items: [
-      { q: "Comment modifier mes informations personnelles ?", a: "Depuis votre espace Compte, cliquez sur « Modifier mes informations ». Vous pouvez y mettre à jour votre nom, votre situation, votre ville et votre adresse mail." },
-      { q: "Comment changer mon adresse e-mail ?", a: "Rendez-vous dans votre Compte, section informations personnelles, et modifiez l'adresse mail. Une confirmation peut vous être demandée pour sécuriser le changement." },
-      { q: "Comment me déconnecter de mon compte ?", a: "Cliquez sur le bouton de déconnexion en bas du menu latéral, à côté de votre nom. Vous serez ramené à l'écran de connexion." },
-      { q: "J'ai oublié mon mot de passe, que faire ?", a: "Sur l'écran de connexion, utilisez le lien de réinitialisation pour recevoir les instructions par e-mail. Pour toute difficulté, contactez le support." },
+const CONTENT: Record<string, Content> = {
+  fr: {
+    title: "Notre espace d'aide Subsidium",
+    subtitle: "Besoin d'aide ? Retrouvez les réponses aux questions les plus fréquentes, par thématique.",
+    search: "Rechercher une question…", noResult: "Aucune réponse ne correspond à votre recherche.",
+    cats: [
+      { titre: "Compte & connexion", items: [
+        { q: "Comment modifier mes informations personnelles ?", a: "Depuis votre espace Compte, cliquez sur « Modifier mes informations » pour mettre à jour votre nom, votre situation, votre ville et votre adresse mail." },
+        { q: "Comment me déconnecter ?", a: "Cliquez sur le bouton de déconnexion en bas du menu latéral, à côté de votre nom." },
+        { q: "Comment changer la langue ?", a: "Dans le menu (en bas) ou depuis votre Compte, choisissez Français, English ou Italiano : l'interface bascule immédiatement." },
+      ] },
+      { titre: "Parcours & niveaux", items: [
+        { q: "Comment devenir Refondateur ?", a: "Adhérez à la Charte d'engagement via un court entretien avec un agent, puis finalisez votre adhésion. Vous devenez alors Refondateur." },
+        { q: "Comment passer Initiateur ?", a: "Réussissez l'auto-évaluation éthique pour obtenir le badge : vous accédez au niveau Initiateur (projets, missions, market-place)." },
+        { q: "Qu'est-ce qu'un Refondateur Certifié (Leader) ?", a: "En suivant le Parcours Leader puis en demandant la certification (validée par l'équipe), vous pouvez créer et animer des Clubs." },
+      ] },
+      { titre: "Idées & Projets", items: [
+        { q: "Quelle différence entre une idée et un projet ?", a: "Une idée est une proposition ouverte au débat. Un projet est une initiative structurée que l'on peut suivre, rejoindre ou porter." },
+        { q: "Comment proposer une idée ?", a: "Dans la rubrique Idées, cliquez sur « Exprimer une idée »." },
+        { q: "Qu'est-ce qu'un projet privé ?", a: "Un projet privé n'est visible que par ses membres. Candidatez pour demander à le rejoindre." },
+      ] },
+      { titre: "Confidentialité & support", items: [
+        { q: "Mes données sont-elles sécurisées ?", a: "Vos données sont conservées de manière sécurisée et utilisées uniquement pour le fonctionnement de la plateforme." },
+        { q: "Comment contacter le support ?", a: "Écrivez à l'équipe Subsidium depuis votre Compte ; nous revenons vers vous au plus vite." },
+      ] },
     ],
   },
-  {
-    key: "parcours", titre: "Parcours & niveaux",
-    items: [
-      { q: "Comment devenir Refondateur ?", a: "Adhérez à la Charte d'engagement via un court entretien avec l'agent SUBSIDIUM, puis finalisez votre adhésion. Vous devenez alors Refondateur et pouvez exprimer vos idées." },
-      { q: "Qu'est-ce que l'auto-évaluation éthique ?", a: "C'est un parcours d'accompagnement (et non un test idéologique) qui couvre 8 dimensions de la doctrine. Vos réponses, formulées à l'échelle Jamais / Parfois / Souvent / Toujours, situent votre engagement et peuvent ouvrir le niveau Initiateur." },
-      { q: "Comment passer Initiateur ?", a: "Après avoir obtenu le badge à l'auto-évaluation, vous accédez au niveau Initiateur : vous pouvez porter des projets, candidater aux missions et accéder à la Market-place." },
-      { q: "Qu'est-ce qu'un Refondateur Certifié (Leader) ?", a: "En suivant le Parcours Leader puis en demandant la certification (validée par l'équipe SUBSIDIUM), vous devenez Refondateur Certifié. Vous pouvez alors créer et animer des Clubs." },
+  en: {
+    title: "Our Subsidium help center",
+    subtitle: "Need help? Find answers to the most frequent questions, by topic.",
+    search: "Search a question…", noResult: "No answer matches your search.",
+    cats: [
+      { titre: "Account & sign-in", items: [
+        { q: "How do I edit my personal information?", a: "From your Account, click “Edit my information” to update your name, status, city and email." },
+        { q: "How do I log out?", a: "Click the log-out button at the bottom of the side menu, next to your name." },
+        { q: "How do I change the language?", a: "In the menu (bottom) or from your Account, choose Français, English or Italiano: the interface switches instantly." },
+      ] },
+      { titre: "Journey & levels", items: [
+        { q: "How do I become a Refounder?", a: "Sign the Engagement Charter via a short interview with an agent, then complete your membership. You become a Refounder." },
+        { q: "How do I become an Initiator?", a: "Pass the ethical self-assessment to earn the badge: you reach the Initiator level (projects, missions, marketplace)." },
+        { q: "What is a Certified Refounder (Leader)?", a: "By completing the Leader Path and requesting certification (validated by the team), you can create and run Clubs." },
+      ] },
+      { titre: "Ideas & Projects", items: [
+        { q: "What's the difference between an idea and a project?", a: "An idea is a proposal open to discussion. A project is a structured initiative you can follow, join or lead." },
+        { q: "How do I propose an idea?", a: "In the Ideas section, click “Propose an idea”." },
+        { q: "What is a private project?", a: "A private project is only visible to its members. Apply to request to join it." },
+      ] },
+      { titre: "Privacy & support", items: [
+        { q: "Is my data secure?", a: "Your data is stored securely and used only to run the platform." },
+        { q: "How do I contact support?", a: "Reach out to the Subsidium team from your Account; we'll get back to you quickly." },
+      ] },
     ],
   },
-  {
-    key: "idees", titre: "Idées & Projets",
-    items: [
-      { q: "Quelle différence entre une idée et un projet ?", a: "Une idée est une proposition citoyenne ouverte au débat. Un projet (appel à projet) est une initiative structurée que l'on peut suivre, rejoindre ou porter, avec un fil d'activité et des contributeurs." },
-      { q: "Comment proposer une idée ?", a: "Depuis la rubrique Idées, cliquez sur « Exprimer une idée ». Votre idée rejoint le débat citoyen où chacun peut réagir et échanger." },
-      { q: "Comment publier ou rejoindre un projet ?", a: "Dans la rubrique Projets, utilisez « Publier un projet » pour porter le vôtre. Pour contribuer à un projet existant, ouvrez sa fiche puis « Suivre » ou « Candidater pour contribuer »." },
-      { q: "Qu'est-ce qu'un projet privé ?", a: "Un projet privé n'est visible que par ses membres. Pour y accéder, candidatez : le porteur du projet accepte ou refuse votre demande." },
+  it: {
+    title: "Il nostro centro assistenza Subsidium",
+    subtitle: "Hai bisogno di aiuto? Trova le risposte alle domande più frequenti, per argomento.",
+    search: "Cerca una domanda…", noResult: "Nessuna risposta corrisponde alla tua ricerca.",
+    cats: [
+      { titre: "Account & accesso", items: [
+        { q: "Come modifico i miei dati personali?", a: "Dal tuo Account, clicca su « Modifica i miei dati » per aggiornare nome, situazione, città ed email." },
+        { q: "Come mi disconnetto?", a: "Clicca sul pulsante di disconnessione in fondo al menu laterale, accanto al tuo nome." },
+        { q: "Come cambio la lingua ?", a: "Nel menu (in basso) o dal tuo Account, scegli Français, English o Italiano: l'interfaccia cambia subito." },
+      ] },
+      { titre: "Percorso & livelli", items: [
+        { q: "Come divento Rifondatore?", a: "Aderisci alla Carta d'impegno con un breve colloquio con un agente, poi completa l'adesione. Diventi Rifondatore." },
+        { q: "Come divento Iniziatore?", a: "Supera l'autovalutazione etica per ottenere il badge: accedi al livello Iniziatore (progetti, missioni, marketplace)." },
+        { q: "Cos'è un Rifondatore Certificato (Leader)?", a: "Completando il Percorso Leader e richiedendo la certificazione (convalidata dal team), puoi creare e animare Club." },
+      ] },
+      { titre: "Idee & Progetti", items: [
+        { q: "Che differenza c'è tra un'idea e un progetto?", a: "Un'idea è una proposta aperta al dibattito. Un progetto è un'iniziativa strutturata che puoi seguire, raggiungere o guidare." },
+        { q: "Come propongo un'idea?", a: "Nella sezione Idee, clicca su « Proponi un'idea »." },
+        { q: "Cos'è un progetto privato?", a: "Un progetto privato è visibile solo ai suoi membri. Candidati per chiedere di unirti." },
+      ] },
+      { titre: "Privacy & supporto", items: [
+        { q: "I miei dati sono al sicuro?", a: "I tuoi dati sono conservati in modo sicuro e usati solo per il funzionamento della piattaforma." },
+        { q: "Come contatto il supporto?", a: "Scrivi al team Subsidium dal tuo Account; ti risponderemo al più presto." },
+      ] },
     ],
   },
-  {
-    key: "engagement", titre: "Missions, Market-place & Organisations",
-    items: [
-      { q: "Comment candidater à une mission ?", a: "Ouvrez la fiche de la mission puis cliquez sur « Candidater » et complétez le formulaire. L'organisation émettrice reçoit votre candidature et peut l'accepter ou la refuser." },
-      { q: "Comment contacter une offre de la Market-place ?", a: "Sur la fiche de l'offre, utilisez le formulaire de contact. Votre demande est transmise à l'organisation qui propose l'offre." },
-      { q: "Comment réفérencer mon organisation ?", a: "Dans la rubrique Organisations, cliquez sur « Créer une organisation ». Elle est ensuite soumise à labellisation par SUBSIDIUM avant d'apparaître dans l'annuaire public." },
-      { q: "Qu'est-ce que la labellisation ?", a: "La labellisation est la validation d'une organisation par SUBSIDIUM. Une organisation labellisée apparaît dans l'annuaire et gagne en visibilité auprès des citoyens." },
-    ],
-  },
-  {
-    key: "clubs", titre: "Clubs",
-    items: [
-      { q: "Qu'est-ce qu'un Club ?", a: "Un Club réunit des citoyens autour d'une thématique ou d'un territoire, avec un mur de partage pour échanger entre membres." },
-      { q: "Comment créer un Club ?", a: "La création de Clubs est réservée aux Refondateurs Certifiés (Leaders). Une fois certifié, utilisez « Créer un club » dans la rubrique Clubs." },
-    ],
-  },
-  {
-    key: "confidentialite", titre: "Confidentialité & sécurité",
-    items: [
-      { q: "Mes données sont-elles sécurisées ?", a: "Vos données personnelles sont conservées de manière sécurisée et ne sont utilisées que pour le fonctionnement de la plateforme. Vous pouvez les consulter et les mettre à jour à tout moment depuis votre Compte." },
-      { q: "Qui peut voir mes contributions ?", a: "Vos idées et messages publics sont visibles par la communauté. Les contenus des projets privés et des clubs ne sont visibles que par leurs membres." },
-    ],
-  },
-  {
-    key: "support", titre: "Support",
-    items: [
-      { q: "Comment contacter le support ?", a: "Écrivez à l'équipe SUBSIDIUM depuis votre Compte ou à l'adresse de contact indiquée. Nous revenons vers vous dans les meilleurs délais." },
-      { q: "Que faire en cas de problème technique ?", a: "Rechargez la page et vérifiez votre connexion. Si le problème persiste, contactez le support en décrivant l'écran concerné et l'action effectuée." },
-    ],
-  },
-];
-
-// correction d'un caractère d'échappement involontaire
-CATEGORIES[3].items[2].q = "Comment référencer mon organisation ?";
+};
 
 export default function FaqPage() {
-  const [cat, setCat] = useState(CATEGORIES[0].key);
+  const { lang } = useLang();
+  const C = CONTENT[lang] || CONTENT.fr;
+  const [cat, setCat] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
@@ -80,20 +102,17 @@ export default function FaqPage() {
     if (!searching) return [];
     const s = q.toLowerCase();
     const out: { cat: string; item: QA }[] = [];
-    for (const c of CATEGORIES) for (const it of c.items)
-      if (it.q.toLowerCase().includes(s) || it.a.toLowerCase().includes(s)) out.push({ cat: c.titre, item: it });
+    C.cats.forEach((c) => c.items.forEach((it) => { if (it.q.toLowerCase().includes(s) || it.a.toLowerCase().includes(s)) out.push({ cat: c.titre, item: it }); }));
     return out;
-  }, [q, searching]);
+  }, [q, searching, C]);
 
-  const current = CATEGORIES.find((c) => c.key === cat) || CATEGORIES[0];
-
-  function item(qa: QA, sub?: string, idx?: number) {
-    const id = (sub || cat) + "-" + (idx ?? qa.q);
+  function item(qa: QA, sub: string, idx: number) {
+    const id = sub + "-" + idx;
     const isOpen = open === id;
     return (
       <div key={id} style={{ border: "1px solid #EBD9CD", borderRadius: 12, background: "#fff", marginBottom: 10, overflow: "hidden" }}>
         <button onClick={() => setOpen(isOpen ? null : id)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, color: "#372646", fontWeight: 700, fontSize: 15 }}>
-          <span style={{ flex: 1 }}>{qa.q}{sub ? <span style={{ color: "#9C919E", fontWeight: 500, fontSize: 12.5 }}> · {sub}</span> : null}</span>
+          <span style={{ flex: 1 }}>{qa.q}</span>
           <span style={{ color: "#C2452F", fontSize: 22, lineHeight: 1, transform: isOpen ? "rotate(45deg)" : "none", transition: "transform .15s" }}>+</span>
         </button>
         {isOpen && <div style={{ padding: "0 16px 14px", color: "#5E4A73", fontSize: 14, lineHeight: 1.6 }}>{qa.a}</div>}
@@ -101,37 +120,36 @@ export default function FaqPage() {
     );
   }
 
+  const current = C.cats[cat] || C.cats[0];
+
   return (
     <AppShell>
-      <div className="board-head"><h1>Notre espace d'aide Subsidium</h1></div>
-      <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 16px", lineHeight: 1.6 }}>
-        Besoin d'aide ? Retrouvez les réponses aux questions les plus fréquentes, par thématique.
-      </p>
+      <div className="board-head"><h1>{C.title}</h1></div>
+      <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 16px", lineHeight: 1.6 }}>{C.subtitle}</p>
 
       <div className="board-tools">
         <div className="board-search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher une question…" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={C.search} />
         </div>
       </div>
 
       {searching ? (
         <div style={{ maxWidth: 860 }}>
-          {results.length === 0 ? <p className="board-empty">Aucune réponse ne correspond à votre recherche.</p>
-          : results.map((r, i) => item(r.item, r.cat, i))}
+          {results.length === 0 ? <p className="board-empty">{C.noResult}</p> : results.map((r, i) => item(r.item, "search", i))}
         </div>
       ) : (
         <div style={{ display: "flex", gap: 22, flexWrap: "wrap", alignItems: "flex-start" }}>
           <nav style={{ flex: "1 1 220px", maxWidth: 260, border: "1px solid #EBD9CD", borderRadius: 14, background: "#fff", padding: 6 }}>
-            {CATEGORIES.map((c) => (
-              <button key={c.key} onClick={() => { setCat(c.key); setOpen(null); }} style={{ width: "100%", textAlign: "left", background: c.key === cat ? "#FCE9E2" : "none", color: c.key === cat ? "#C2452F" : "#5E4A73", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontWeight: c.key === cat ? 800 : 600, fontSize: 14 }}>
+            {C.cats.map((c, i) => (
+              <button key={i} onClick={() => { setCat(i); setOpen(null); }} style={{ width: "100%", textAlign: "left", background: i === cat ? "#FCE9E2" : "none", color: i === cat ? "#C2452F" : "#5E4A73", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontWeight: i === cat ? 800 : 600, fontSize: 14 }}>
                 {c.titre}
               </button>
             ))}
           </nav>
           <div style={{ flex: "2 1 460px" }}>
             <h2 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "0 0 12px" }}>{current.titre}</h2>
-            {current.items.map((qa, i) => item(qa, undefined, i))}
+            {current.items.map((qa, i) => item(qa, "c" + cat, i))}
           </div>
         </div>
       )}
