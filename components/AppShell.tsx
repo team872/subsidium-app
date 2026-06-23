@@ -15,6 +15,9 @@ const ICONS: Record<string, JSX.Element> = {
   idees: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6" /><path d="M10 21h4" /><path d="M12 3a6 6 0 0 1 4 10.5c-.7.7-1 1.3-1 2.5H9c0-1.2-.3-1.8-1-2.5A6 6 0 0 1 12 3z" /></svg>
   ),
+  projets: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22V4a1 1 0 0 1 1-1h9l-2 4 2 4H5" /><path d="M4 13h11" /></svg>
+  ),
   organisations: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18" /><path d="M5 21V7l8-4v18" /><path d="M19 21V11l-6-4" /><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" /></svg>
   ),
@@ -44,6 +47,7 @@ const ICONS: Record<string, JSX.Element> = {
 const NAV = [
   { href: "/accueil", key: "accueil", label: "Accueil", minNiveau: 0 },
   { href: "/idees", key: "idees", label: "Idées", minNiveau: 0 },
+  { href: "/projets", key: "projets", label: "Projets", minNiveau: 2 },
   { href: "/organisations", key: "organisations", label: "Organisations", minNiveau: 0 },
   { href: "/missions", key: "missions", label: "Missions", minNiveau: 2 },
   { href: "/marche", key: "marche", label: "Market-place", minNiveau: 2 },
