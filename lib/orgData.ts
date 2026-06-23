@@ -1,6 +1,7 @@
 import { query } from "./db";
 
-// Module Organisations (inc.1) : annuaire des organisations labellisées + fiche + création.
+// Module Organisations : annuaire des organisations labellisées + fiche + création (inc.1)
+// + espace membre (mes organisations) et publications propositions/réussites (inc.2).
 // Tables créées/amorcées à la demande. Données seed inspirées de l'AVP (p228-232).
 
 export type OrgDTO = {
@@ -8,6 +9,11 @@ export type OrgDTO = {
   budget: number | null; benevoles: number | null; annee: number | null;
   adresse: string | null; telephone: string | null; email: string | null; site: string | null;
   labellisee: boolean; grad: string;
+};
+export type OrgMembership = OrgDTO & { role: string };
+export type PublicationDTO = {
+  id: number; org_id: number; kind: "proposition" | "reussite";
+  titre: string; corps: string; auteur: string; created_at: string;
 };
 
 const GRADS = [
@@ -70,6 +76,14 @@ async function init(): Promise<void> {
       role TEXT DEFAULT 'membre',
       PRIMARY KEY (org_id, user_id)
     );
+    CREATE TABLE IF NOT EXISTS org_publications (
+      id SERIAL PRIMARY KEY,
+      org_id INT REFERENCES organisations(id) ON DELETE CASCADE,
+      author_id INT REFERENCES users(id) ON DELETE SET NULL,
+      kind TEXT NOT NULL DEFAULT 'proposition',
+      titre TEXT NOT NULL, corps TEXT,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
   `);
   const c = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM organisations`);
   if (c[0].n === 0) {
@@ -120,4 +134,48 @@ export async function createOrganisation(
 export async function setLabellisee(id: number, labellisee: boolean): Promise<void> {
   await ensureOrg();
   await query(`UPDATE organisations SET labellisee=$2 WHERE id=$1`, [id, labellisee]);
+}
+
+// --- inc.2 : espace membre + publications ---
+
+export async function listMyOrganisations(userId: number): Promise<OrgMembership[]> {
+  await ensureOrg();
+  const rows = await query<any>(
+    `SELECT o.id,o.name,o.type,o.region,o.descr AS "desc",o.budget,o.benevoles,o.annee,
+            o.adresse,o.telephone,o.email,o.site,o.labellisee, m.role
+     FROM org_members m JOIN organisations o ON o.id=m.org_id
+     WHERE m.user_id=$1 ORDER BY o.name ASC`,
+    [userId]
+  );
+  return rows.map((r) => ({ ...mapOrg(r), role: r.role }));
+}
+export async function isOrgMember(orgId: number, userId: number): Promise<boolean> {
+  await ensureOrg();
+  const rows = await query<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM org_members WHERE org_id=$1 AND user_id=$2`, [orgId, userId]
+  );
+  return rows[0].n > 0;
+}
+export async function listPublications(orgId: number): Promise<PublicationDTO[]> {
+  await ensureOrg();
+  const rows = await query<any>(
+    `SELECT p.id,p.org_id,p.kind,p.titre,p.corps,p.created_at,
+            COALESCE(NULLIF(TRIM(CONCAT(u.prenom,' ',u.nom)),''), u.email, 'Membre') AS auteur
+     FROM org_publications p LEFT JOIN users u ON u.id=p.author_id
+     WHERE p.org_id=$1 ORDER BY p.created_at DESC`,
+    [orgId]
+  );
+  return rows.map((r) => ({
+    id: r.id, org_id: r.org_id, kind: r.kind === "reussite" ? "reussite" : "proposition",
+    titre: r.titre, corps: r.corps || "", auteur: r.auteur, created_at: r.created_at,
+  }));
+}
+export async function createPublication(orgId: number, authorId: number, kind: string, titre: string, corps: string): Promise<number> {
+  await ensureOrg();
+  const k = kind === "reussite" ? "reussite" : "proposition";
+  const rows = await query<{ id: number }>(
+    `INSERT INTO org_publications (org_id,author_id,kind,titre,corps) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    [orgId, authorId, k, titre, corps]
+  );
+  return rows[0].id;
 }

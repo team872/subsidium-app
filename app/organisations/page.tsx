@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import "@/components/MemberBoards.css";
 
-type Org = { id: number; name: string; type: string; region: string | null; desc: string; adresse: string | null; grad: string };
+type Org = { id: number; name: string; type: string; region: string | null; desc: string; adresse: string | null; grad: string; labellisee?: boolean };
 
 const TYPES = ["Association", "Établissement public", "Collectivité territoriale", "Entreprise", "Autre"];
 
@@ -17,6 +17,7 @@ function initials(n: string) {
 export default function OrganisationsPage() {
   const router = useRouter();
   const [orgs, setOrgs] = useState<Org[]>([]);
+  const [mine, setMine] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
@@ -27,6 +28,7 @@ export default function OrganisationsPage() {
 
   useEffect(() => {
     fetch("/app/api/organisations").then((r) => r.json()).then((d) => setOrgs(d.organisations || [])).catch(() => {}).finally(() => setLoading(false));
+    fetch("/app/api/organisations/mine").then((r) => r.json()).then((d) => setMine(d.organisations || [])).catch(() => {});
   }, []);
 
   const list = useMemo(() => orgs.filter((o) => {
@@ -53,6 +55,26 @@ export default function OrganisationsPage() {
         <h1>Organisations labellisées</h1>
         <button className="btn btn-coral" onClick={() => setOpen(true)}>Créer une organisation</button>
       </div>
+
+      {mine.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <h2 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "0 0 10px" }}>Mes organisations</h2>
+          <div className="idees-grid">
+            {mine.map((o) => (
+              <Link key={o.id} href={`/organisations/${o.id}`} className="icard">
+                <div style={{ height: 96, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>
+                <div className="bd">
+                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{o.type}</span>
+                  <h3 style={{ marginTop: 4 }}>{o.name}</h3>
+                  {o.labellisee === false
+                    ? <span style={{ fontSize: 12, fontWeight: 700, color: "#8A5A00", background: "#FCE3B4", borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>En attente de labellisation</span>
+                    : <span style={{ fontSize: 12, fontWeight: 700, color: "#1E6B1E", background: "#DBF0D9", borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>Labellisée</span>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="board-tools">
         <div className="board-search">
