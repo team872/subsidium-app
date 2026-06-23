@@ -51,7 +51,7 @@ export default function IdeesPage() {
   const [tab, setTab] = useState<TabKey>("toutes");
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("");
-  const [view, setView] = useState<"liste" | "carte">("liste");
+  const [view, setView] = useState<"liste" | "carte">("carte");
   const [showForm, setShowForm] = useState(false);
   const { rang, charteValidee, paye } = useNiveau();
   const peutProposer = peutProposerIdee(rang);
