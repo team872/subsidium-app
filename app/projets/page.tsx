@@ -2,9 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import "@/components/MemberBoards.css";
+
+const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
+  ssr: false,
+  loading: () => <div className="board-empty">Chargement de la carte…</div>,
+});
 
 type Projet = { id: number; title: string; theme: string | null; desc: string; lieu: string | null; prive: boolean; membres: number; grad: string };
 
@@ -13,6 +19,19 @@ function initials(n: string) {
 }
 const TABS: [string, string][] = [["tous", "Tous les projets"], ["suivis", "Projets suivis"], ["emis", "Projets émis"]];
 
+function ProjetCard({ p }: { p: Projet }) {
+  return (
+    <Link href={`/projets/${p.id}`} className="icard">
+      <div style={{ height: 96, background: p.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(p.title)}</div>
+      <div className="bd">
+        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{p.theme || "Projet"}{p.prive ? " · privé" : ""}</span>
+        <h3 style={{ marginTop: 4 }}>{p.title}</h3>
+        {p.lieu && <p style={{ color: "#9C919E", fontSize: 13 }}>{p.lieu} · {p.membres} membre{p.membres > 1 ? "s" : ""}</p>}
+      </div>
+    </Link>
+  );
+}
+
 export default function ProjetsPage() {
   const router = useRouter();
   const [tab, setTab] = useState("tous");
@@ -20,6 +39,8 @@ export default function ProjetsPage() {
   const [loading, setLoading] = useState(true);
   const [niveau, setNiveau] = useState(0);
   const [q, setQ] = useState("");
+  const [view, setView] = useState<"liste" | "carte">("liste");
+  const [points, setPoints] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: "", theme: "", lieu: "", desc: "", prive: false });
   const [busy, setBusy] = useState(false);
@@ -30,7 +51,10 @@ export default function ProjetsPage() {
     fetch(`/app/api/projets?filter=${t}`).then((r) => r.json()).then((d) => setProjets(d.projets || [])).catch(() => {}).finally(() => setLoading(false));
   }
   useEffect(() => { load(tab); }, [tab]);
-  useEffect(() => { fetch("/app/api/auth/me").then((r) => r.json()).then((d) => setNiveau(d.user?.niveau ?? 0)).catch(() => {}); }, []);
+  useEffect(() => {
+    fetch("/app/api/auth/me").then((r) => r.json()).then((d) => setNiveau(d.user?.niveau ?? 0)).catch(() => {});
+    fetch("/app/api/projets/geo").then((r) => r.json()).then((d) => setPoints(d.points || [])).catch(() => {});
+  }, []);
 
   const canCreate = niveau >= 2;
   const list = useMemo(() => projets.filter((p) => {
@@ -72,22 +96,26 @@ export default function ProjetsPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un projet, un thème, une ville…" />
         </div>
+        <div style={{ display: "inline-flex", border: "1px solid #E3D7CC", borderRadius: 10, overflow: "hidden", marginLeft: "auto" }}>
+          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>Liste</button>
+          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>Carte</button>
+        </div>
       </div>
 
       {loading ? <p className="board-empty">Chargement des projets…</p>
       : list.length === 0 ? <p className="board-empty">{tab === "tous" ? "Aucun projet pour le moment." : tab === "suivis" ? "Vous ne suivez aucun projet." : "Vous n'avez émis aucun projet."}</p>
-      : (
+      : view === "carte" ? (
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
+            {list.map((p) => <ProjetCard key={p.id} p={p} />)}
+          </div>
+          <div style={{ flex: "2 1 440px", minWidth: 300 }}>
+            <CarteSubsidium points={points} height={560} />
+          </div>
+        </div>
+      ) : (
         <div className="idees-grid">
-          {list.map((p) => (
-            <Link key={p.id} href={`/projets/${p.id}`} className="icard">
-              <div style={{ height: 96, background: p.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(p.title)}</div>
-              <div className="bd">
-                <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{p.theme || "Projet"}{p.prive ? " · privé" : ""}</span>
-                <h3 style={{ marginTop: 4 }}>{p.title}</h3>
-                {p.lieu && <p style={{ color: "#9C919E", fontSize: 13 }}>{p.lieu} · {p.membres} membre{p.membres > 1 ? "s" : ""}</p>}
-              </div>
-            </Link>
-          ))}
+          {list.map((p) => <ProjetCard key={p.id} p={p} />)}
         </div>
       )}
 

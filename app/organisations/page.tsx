@@ -2,9 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import "@/components/MemberBoards.css";
+
+const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
+  ssr: false,
+  loading: () => <div className="board-empty">Chargement de la carte…</div>,
+});
 
 type Org = { id: number; name: string; type: string; region: string | null; desc: string; adresse: string | null; grad: string; labellisee?: boolean };
 
@@ -12,6 +18,18 @@ const TYPES = ["Association", "Établissement public", "Collectivité territoria
 
 function initials(n: string) {
   return n.replace(/[^A-Za-zÀ-ſ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "O";
+}
+function OrgCard({ o }: { o: Org }) {
+  return (
+    <Link href={`/organisations/${o.id}`} className="icard">
+      <div style={{ height: 96, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>
+      <div className="bd">
+        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{o.type}</span>
+        <h3 style={{ marginTop: 4 }}>{o.name}</h3>
+        {o.adresse && <p style={{ color: "#9C919E", fontSize: 13 }}>{o.adresse}</p>}
+      </div>
+    </Link>
+  );
 }
 
 export default function OrganisationsPage() {
@@ -21,6 +39,8 @@ export default function OrganisationsPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
+  const [view, setView] = useState<"liste" | "carte">("liste");
+  const [points, setPoints] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", type: "Association", region: "", desc: "", adresse: "", telephone: "", email: "", site: "" });
   const [busy, setBusy] = useState(false);
@@ -29,6 +49,7 @@ export default function OrganisationsPage() {
   useEffect(() => {
     fetch("/app/api/organisations").then((r) => r.json()).then((d) => setOrgs(d.organisations || [])).catch(() => {}).finally(() => setLoading(false));
     fetch("/app/api/organisations/mine").then((r) => r.json()).then((d) => setMine(d.organisations || [])).catch(() => {});
+    fetch("/app/api/organisations/geo").then((r) => r.json()).then((d) => setPoints(d.points || [])).catch(() => {});
   }, []);
 
   const list = useMemo(() => orgs.filter((o) => {
@@ -56,7 +77,7 @@ export default function OrganisationsPage() {
         <button className="btn btn-coral" onClick={() => setOpen(true)}>Créer une organisation</button>
       </div>
 
-      {mine.length > 0 && (
+      {view === "liste" && mine.length > 0 && (
         <div style={{ marginBottom: 22 }}>
           <h2 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "0 0 10px" }}>Mes organisations</h2>
           <div className="idees-grid">
@@ -85,22 +106,26 @@ export default function OrganisationsPage() {
           <option value="">Tous les types</option>
           {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
+        <div style={{ display: "inline-flex", border: "1px solid #E3D7CC", borderRadius: 10, overflow: "hidden", marginLeft: "auto" }}>
+          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>Liste</button>
+          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>Carte</button>
+        </div>
       </div>
 
       {loading ? <p className="board-empty">Chargement des organisations…</p>
       : list.length === 0 ? <p className="board-empty">Aucune organisation ne correspond à votre recherche.</p>
-      : (
+      : view === "carte" ? (
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
+            {list.map((o) => <OrgCard key={o.id} o={o} />)}
+          </div>
+          <div style={{ flex: "2 1 440px", minWidth: 300 }}>
+            <CarteSubsidium points={points} height={560} />
+          </div>
+        </div>
+      ) : (
         <div className="idees-grid">
-          {list.map((o) => (
-            <Link key={o.id} href={`/organisations/${o.id}`} className="icard">
-              <div style={{ height: 96, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>
-              <div className="bd">
-                <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{o.type}</span>
-                <h3 style={{ marginTop: 4 }}>{o.name}</h3>
-                {o.adresse && <p style={{ color: "#9C919E", fontSize: 13 }}>{o.adresse}</p>}
-              </div>
-            </Link>
-          ))}
+          {list.map((o) => <OrgCard key={o.id} o={o} />)}
         </div>
       )}
 
