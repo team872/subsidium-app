@@ -1,7 +1,8 @@
 import { query } from "./db";
+import { ensureOrg } from "./orgData";
 
-// Module Missions (espace Initiateur). Tables creees et amorcees a la demande
-// (auto-contenu, sans toucher l'init principal). Donnees seed issues de l'AVP (p98-104).
+// Module Missions (espace Initiateur) + côté émetteur (organisation publie des missions
+// et gère les candidatures). Tables créées et amorcées a la demande. Seed AVP (p98-104).
 
 export type MissionDTO = {
   id: number; type: string; color: string; title: string; org: string;
@@ -9,6 +10,8 @@ export type MissionDTO = {
 };
 export type CandidatureStatut = "en_attente" | "acceptee" | "refusee";
 export type MyCandidatureDTO = MissionDTO & { statut: CandidatureStatut };
+export type EmittedMissionDTO = MissionDTO & { candidatures: number; en_attente: number };
+export type CandidatureDTO = { id: number; nom: string; prenom: string; email: string; presentation: string; statut: CandidatureStatut; created_at: string };
 
 export const TYPE_COLOR: Record<string, string> = {
   "Bénévolat": "#F27B6A",
@@ -75,6 +78,8 @@ async function init(): Promise<void> {
       descr TEXT, profil TEXT, location TEXT, date_label TEXT,
       created_at TIMESTAMPTZ DEFAULT now()
     );
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS owner_id INT;
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS org_id INT;
     CREATE TABLE IF NOT EXISTS candidatures (
       id SERIAL PRIMARY KEY,
       mission_id INT REFERENCES missions(id) ON DELETE CASCADE,
@@ -140,4 +145,58 @@ export async function listMyCandidatures(userId: number): Promise<MyCandidatureD
     [userId]
   );
   return rows.map((r) => ({ ...mapMission(r), statut: (r.statut || "en_attente") as CandidatureStatut }));
+}
+
+// --- côté émetteur (organisation) ---
+
+export async function createMissionForOrg(
+  orgId: number, ownerId: number,
+  f: { type: string; title: string; desc: string; profil: string; location?: string; date?: string }
+): Promise<number> {
+  await ensureMissions();
+  await ensureOrg();
+  const o = await query<{ name: string }>(`SELECT name FROM organisations WHERE id=$1`, [orgId]);
+  const orgName = o[0]?.name || "";
+  const rows = await query<{ id: number }>(
+    `INSERT INTO missions (type,title,org,descr,profil,location,date_label,owner_id,org_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+    [f.type, f.title, orgName, f.desc, f.profil, f.location || null, f.date || null, ownerId, orgId]
+  );
+  return rows[0].id;
+}
+export async function listOrgMissions(orgId: number): Promise<EmittedMissionDTO[]> {
+  await ensureMissions();
+  const rows = await query<any>(
+    `SELECT id, type, title, org, descr AS "desc", profil, location, date_label AS "date",
+       (SELECT COUNT(*)::int FROM candidatures c WHERE c.mission_id = missions.id) AS candidatures,
+       (SELECT COUNT(*)::int FROM candidatures c WHERE c.mission_id = missions.id AND c.statut='en_attente') AS en_attente
+     FROM missions WHERE org_id=$1 ORDER BY id DESC`,
+    [orgId]
+  );
+  return rows.map((r) => ({ ...mapMission(r), candidatures: r.candidatures, en_attente: r.en_attente }));
+}
+export async function getMissionOrgId(missionId: number): Promise<number | null> {
+  await ensureMissions();
+  const rows = await query<{ org_id: number | null }>(`SELECT org_id FROM missions WHERE id=$1`, [missionId]);
+  return rows[0]?.org_id ?? null;
+}
+export async function listCandidatures(missionId: number): Promise<CandidatureDTO[]> {
+  await ensureMissions();
+  const rows = await query<any>(
+    `SELECT id,nom,prenom,email,presentation,statut,created_at FROM candidatures WHERE mission_id=$1 ORDER BY created_at ASC`,
+    [missionId]
+  );
+  return rows.map((r) => ({
+    id: r.id, nom: r.nom || "", prenom: r.prenom || "", email: r.email || "",
+    presentation: r.presentation || "", statut: (r.statut || "en_attente") as CandidatureStatut, created_at: r.created_at,
+  }));
+}
+export async function getCandidatureMissionId(candId: number): Promise<number | null> {
+  await ensureMissions();
+  const rows = await query<{ mission_id: number }>(`SELECT mission_id FROM candidatures WHERE id=$1`, [candId]);
+  return rows[0]?.mission_id ?? null;
+}
+export async function setCandidatureStatut(candId: number, statut: CandidatureStatut): Promise<void> {
+  await ensureMissions();
+  await query(`UPDATE candidatures SET statut=$2 WHERE id=$1`, [candId, statut]);
 }

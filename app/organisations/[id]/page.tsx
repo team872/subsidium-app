@@ -91,6 +91,12 @@ export default function OrgDetailPage() {
             {org.email && <div style={infoBox}><b style={{ color: "#372646" }}>Adresse mail</b><div style={{ color: "#5E4A73", fontSize: 14 }}>{org.email}</div></div>}
             {org.site && <div style={infoBox}><b style={{ color: "#372646" }}>Site internet</b><div style={{ color: "#5E4A73", fontSize: 14, overflowWrap: "anywhere" }}><a href={org.site} target="_blank" rel="noreferrer" style={{ color: "#C2452F" }}>{org.site}</a></div></div>}
           </div>
+
+          {isMember && (
+            <div style={{ marginTop: 16 }}>
+              <Link href={`/organisations/${org.id}/gestion`} className="btn btn-ghost">Gérer les missions & candidatures</Link>
+            </div>
+          )}
         </div>
       </section>
 
