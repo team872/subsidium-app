@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fugaz_One, Figtree } from "next/font/google";
 import "./globals.css";
+import LangProvider from "@/components/LangProvider";
 
 const fugaz = Fugaz_One({
   weight: "400",
@@ -35,7 +36,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className={`${fugaz.variable} ${figtree.variable}`}>
-      <body>{children}</body>
+      <body><LangProvider>{children}</LangProvider></body>
     </html>
   );
 }

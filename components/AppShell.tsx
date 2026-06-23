@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import TestBar from "@/components/TestBar";
 import Mascotte from "@/components/Mascotte";
-import { NIVEAUX, clampNiveau } from "@/lib/niveau";
+import { useLang } from "@/components/LangProvider";
+import { clampNiveau } from "@/lib/niveau";
 
 type Me = { prenom: string | null; nom: string | null; email: string; niveau: number | null } | null;
 
@@ -49,18 +50,18 @@ const ICONS: Record<string, JSX.Element> = {
 };
 
 const NAV = [
-  { href: "/accueil", key: "accueil", label: "Accueil", minNiveau: 0 },
-  { href: "/idees", key: "idees", label: "Idées", minNiveau: 0 },
-  { href: "/projets", key: "projets", label: "Projets", minNiveau: 2 },
-  { href: "/organisations", key: "organisations", label: "Organisations", minNiveau: 0 },
-  { href: "/missions", key: "missions", label: "Missions", minNiveau: 2 },
-  { href: "/marche", key: "marche", label: "Market-place", minNiveau: 2 },
-  { href: "/leader", key: "leader", label: "Parcours Leader", minNiveau: 2 },
-  { href: "/clubs", key: "clubs", label: "Clubs", minNiveau: 2 },
-  { href: "/evenements", key: "evenements", label: "Événements", minNiveau: 0 },
-  { href: "/notifications", key: "notifications", label: "Notifications", minNiveau: 0 },
-  { href: "/faq", key: "faq", label: "Aide & FAQ", minNiveau: 0 },
-  { href: "/admin", key: "admin", label: "Administration", adminOnly: true },
+  { href: "/accueil", key: "accueil", minNiveau: 0 },
+  { href: "/idees", key: "idees", minNiveau: 0 },
+  { href: "/projets", key: "projets", minNiveau: 2 },
+  { href: "/organisations", key: "organisations", minNiveau: 0 },
+  { href: "/missions", key: "missions", minNiveau: 2 },
+  { href: "/marche", key: "marche", minNiveau: 2 },
+  { href: "/leader", key: "leader", minNiveau: 2 },
+  { href: "/clubs", key: "clubs", minNiveau: 2 },
+  { href: "/evenements", key: "evenements", minNiveau: 0 },
+  { href: "/notifications", key: "notifications", minNiveau: 0 },
+  { href: "/faq", key: "faq", minNiveau: 0 },
+  { href: "/admin", key: "admin", adminOnly: true },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -71,6 +72,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [unread, setUnread] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
+  const { t, lang, setLang, langs } = useLang();
 
   useEffect(() => {
     fetch("/app/api/auth/me")
@@ -86,9 +88,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [pathname]);
 
-  const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "Invité";
+  const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "—";
   const niveau = clampNiveau(me?.niveau ?? 1);
-  const role = NIVEAUX[niveau];
+  const role = t(`role.${niveau}`);
   const nav = NAV.filter((n) => (n.adminOnly ? isAdmin : niveau >= (n.minNiveau ?? 0)));
 
   async function logout() {
@@ -111,7 +113,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </svg>
           </span>
           <strong className="brandtxt" style={{ fontFamily: "var(--font-display), cursive", fontSize: "1.05rem" }}>Subsidium</strong>
-          <button className="side-burger" onClick={() => setOpen((o) => !o)} aria-label="Replier le menu">
+          <button className="side-burger" onClick={() => setOpen((o) => !o)} aria-label="Menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
         </div>
@@ -120,10 +122,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {nav.map((n) => (
             <Link key={n.key} href={n.href} className={pathname === n.href ? "active" : ""}>
               {ICONS[n.key]}
-              <span>{n.label}</span>
+              <span>{t(`nav.${n.key}`)}</span>
               {n.key === "notifications" && unread > 0 && (
                 <i
-                  aria-label={`${unread} non lues`}
+                  aria-label={`${unread}`}
                   style={{
                     marginLeft: "auto", background: "#F27B6A", color: "#fff", borderRadius: 999,
                     fontSize: 11, fontWeight: 700, fontStyle: "normal", minWidth: 18, height: 18,
@@ -138,16 +140,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="side-foot">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 6px 8px" }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9BFD2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" /></svg>
+            <select value={lang} onChange={(e) => setLang(e.target.value as any)} aria-label={t("common.language")}
+              style={{ flex: 1, background: "transparent", color: "#C9BFD2", border: "1px solid rgba(201,191,210,.3)", borderRadius: 8, padding: "5px 8px", fontSize: 13 }}>
+              {langs.map((l) => <option key={l.code} value={l.code} style={{ color: "#372646" }}>{l.label}</option>)}
+            </select>
+          </div>
           <div className="who">
             <Link href="/profil" style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0, textDecoration: "none", color: "inherit" }}>
               <span className="av" />
               <span className="meta">
                 <b>{name}</b>
-                <small>{isAdmin ? "Administrateur" : role}</small>
+                <small>{isAdmin ? t("common.administrator") : role}</small>
               </span>
             </Link>
             {me && (
-              <button onClick={logout} aria-label="Se déconnecter" title="Se déconnecter" style={{ marginLeft: "auto", background: "none", border: "none", color: "#C9BFD2", cursor: "pointer", opacity: 0.85, padding: 4 }}>
+              <button onClick={logout} aria-label={t("common.logout")} title={t("common.logout")} style={{ marginLeft: "auto", background: "none", border: "none", color: "#C9BFD2", cursor: "pointer", opacity: 0.85, padding: 4 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
               </button>
             )}
