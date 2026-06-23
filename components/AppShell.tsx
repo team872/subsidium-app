@@ -39,6 +39,9 @@ const ICONS: Record<string, JSX.Element> = {
   notifications: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
   ),
+  faq: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4" /><path d="M12 17h.01" /></svg>
+  ),
   admin: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
   ),
@@ -55,6 +58,7 @@ const NAV = [
   { href: "/clubs", key: "clubs", label: "Clubs", minNiveau: 2 },
   { href: "/evenements", key: "evenements", label: "Événements", minNiveau: 0 },
   { href: "/notifications", key: "notifications", label: "Notifications", minNiveau: 0 },
+  { href: "/faq", key: "faq", label: "Aide & FAQ", minNiveau: 0 },
   { href: "/admin", key: "admin", label: "Administration", adminOnly: true },
 ];
 
