@@ -31,7 +31,9 @@ function FitBounds({ points }: { points: CartePoint[] }) {
 export default function CarteSubsidium({ points, height = 480 }: { points: CartePoint[]; height?: number }) {
   const pts = points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
   return (
-    <div style={{ height, width: "100%", borderRadius: 16, overflow: "hidden", border: "1px solid #EBD9CD" }}>
+    // position:relative + isolation:isolate => les z-index internes de Leaflet (jusqu'à ~1000)
+    // restent confinés dans cette boîte et ne passent jamais au-dessus de la mascotte / des modales.
+    <div style={{ height, width: "100%", borderRadius: 16, overflow: "hidden", border: "1px solid #EBD9CD", position: "relative", zIndex: 0, isolation: "isolate" }}>
       <MapContainer center={[46.6, 2.4]} zoom={6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
