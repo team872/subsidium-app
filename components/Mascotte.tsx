@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, Fragment } from "react";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-const GREET = "Bonjour, je suis Lumi, votre guide Subsidium ✨ Posez-moi vos questions sur la plateforme, la démarche ou votre parcours.";
+const BOT = "SUBSIDIUM AI";
+const GREET = "Bonjour, je suis l'assistant SUBSIDIUM AI ✨ Posez-moi vos questions sur la plateforme, la démarche ou votre parcours.";
 const SUGGESTIONS = ["Comment devenir Refondateur ?", "Différence entre une idée et un projet ?", "C'est quoi un Club ?"];
 
 const CREAM = "#F3E7D2";
@@ -80,7 +81,7 @@ export default function Mascotte() {
     try {
       const r = await fetch("/app/api/assistant/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: next }) });
       const d = await r.json();
-      setHistory([...next, { role: "assistant", content: d.reply || d.error || "Désolée, je n'ai pas pu répondre." }]);
+      setHistory([...next, { role: "assistant", content: d.reply || d.error || "Désolé, je n'ai pas pu répondre." }]);
     } catch {
       setHistory([...next, { role: "assistant", content: "Connexion impossible pour le moment. Réessayez dans un instant." }]);
     }
@@ -93,7 +94,7 @@ export default function Mascotte() {
         <div style={{ position: "fixed", right: 24, bottom: 96, width: 360, maxWidth: "calc(100vw - 32px)", height: 500, maxHeight: "calc(100vh - 130px)", background: "#fff", border: "1px solid #EBD9CD", borderRadius: 18, boxShadow: "0 18px 50px rgba(55,38,70,.22)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 70 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "linear-gradient(135deg,#F27B6A,#C2452F)", color: "#fff" }}>
             <span style={{ width: 38, height: 38, borderRadius: 999, background: CREAM, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MascotHead size={32} /></span>
-            <span style={{ flex: 1, lineHeight: 1.1 }}><b style={{ fontSize: 15 }}>Lumi</b><br /><small style={{ opacity: .9, fontSize: 11.5 }}>Votre guide Subsidium</small></span>
+            <span style={{ flex: 1, lineHeight: 1.1 }}><b style={{ fontSize: 15 }}>{BOT}</b><br /><small style={{ opacity: .9, fontSize: 11.5 }}>Votre guide Subsidium</small></span>
             <button onClick={() => setOpen(false)} aria-label="Fermer" style={{ background: "rgba(255,255,255,.2)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: 999, cursor: "pointer", fontSize: 16 }}>×</button>
           </div>
 
@@ -111,7 +112,7 @@ export default function Mascotte() {
                 {m.role === "user" ? <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span> : <div>{renderRich(m.content)}</div>}
               </div>
             ))}
-            {busy && <div style={{ alignSelf: "flex-start", color: "#9C919E", fontSize: 13, fontStyle: "italic", padding: "4px 6px" }}>Lumi réfléchit…</div>}
+            {busy && <div style={{ alignSelf: "flex-start", color: "#9C919E", fontSize: 13, fontStyle: "italic", padding: "4px 6px" }}>{BOT} réfléchit…</div>}
           </div>
 
           <div style={{ display: "flex", gap: 8, padding: 10, borderTop: "1px solid #F0E6DD", background: "#fff" }}>
@@ -121,7 +122,7 @@ export default function Mascotte() {
         </div>
       )}
 
-      <button onClick={() => setOpen((o) => !o)} aria-label="Ouvrir l'assistant Lumi" title="Lumi — votre guide Subsidium" style={{ position: "fixed", right: 24, bottom: 24, width: 62, height: 62, borderRadius: 999, border: "3px solid #C2452F", cursor: "pointer", background: CREAM, boxShadow: "0 10px 26px rgba(194,69,47,.42)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 71, padding: 0 }}>
+      <button onClick={() => setOpen((o) => !o)} aria-label="Ouvrir l'assistant SUBSIDIUM AI" title="SUBSIDIUM AI — votre guide" style={{ position: "fixed", right: 24, bottom: 24, width: 62, height: 62, borderRadius: 999, border: "3px solid #C2452F", cursor: "pointer", background: CREAM, boxShadow: "0 10px 26px rgba(194,69,47,.42)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 71, padding: 0 }}>
         <MascotHead size={44} />
       </button>
     </>
