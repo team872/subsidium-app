@@ -17,54 +17,55 @@ const fmtDate = (iso: string) => {
   catch { return ""; }
 };
 
+type Prefs = { langue: string; pays: string | null; parrainage: string; langues: { code: string; label: string }[] };
+
 export default function ProfilPage() {
   const router = useRouter();
   const [user, setUser] = useState<PublicUser | null>(null);
+  const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [loading, setLoading] = useState(true);
   const [edit, setEdit] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [langSaved, setLangSaved] = useState(false);
 
   useEffect(() => {
-    fetch("/app/api/me")
-      .then((r) => r.json())
-      .then((d) => setUser(d.user || null))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+    fetch("/app/api/me").then((r) => r.json()).then((d) => setUser(d.user || null)).catch(() => setUser(null)).finally(() => setLoading(false));
+    fetch("/app/api/preferences").then((r) => r.json()).then((d) => { if (!d.error) setPrefs(d); }).catch(() => {});
   }, []);
 
   async function logout() {
     await fetch("/app/api/auth/logout", { method: "POST" }).catch(() => {});
     router.push("/connexion");
   }
+  async function changeLangue(code: string) {
+    setPrefs((p) => (p ? { ...p, langue: code } : p));
+    try {
+      await fetch("/app/api/preferences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ langue: code }) });
+      setLangSaved(true); setTimeout(() => setLangSaved(false), 1800);
+    } catch {}
+  }
+  function copierLien() {
+    if (!prefs) return;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const lien = `${origin}/app/connexion?parrain=${prefs.parrainage}`;
+    try { navigator.clipboard.writeText(lien); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+  }
 
-  if (loading) {
-    return <AppShell><p className="board-empty">Chargement de votre compte…</p></AppShell>;
-  }
-  if (!user) {
-    return (
-      <AppShell>
-        <p className="board-empty">Vous devez être connecté. <Link href="/connexion">Se connecter</Link></p>
-      </AppShell>
-    );
-  }
+  if (loading) return <AppShell><p className="board-empty">Chargement de votre compte…</p></AppShell>;
+  if (!user) return <AppShell><p className="board-empty">Vous devez être connecté. <Link href="/connexion">Se connecter</Link></p></AppShell>;
 
   const palier = user.palier || "Refondateur";
+  const langueLabel = prefs?.langues.find((l) => l.code === prefs.langue)?.label || "Français";
 
   return (
     <AppShell>
-      <div className="topbar">
-        <h1>Mon compte Subsidium</h1>
-      </div>
+      <div className="topbar"><h1>Mon compte Subsidium</h1></div>
 
       {edit && (
-        <ProfileEditModal
-          user={user}
-          onClose={() => setEdit(false)}
-          onSaved={(u) => { setUser(u); setEdit(false); }}
-        />
+        <ProfileEditModal user={user} onClose={() => setEdit(false)} onSaved={(u) => { setUser(u); setEdit(false); }} />
       )}
 
       <div className="account-grid">
-        {/* ----- Carte identité ----- */}
         <section className="acc-card">
           <span className="acc-avatar">{initials(user)}</span>
           <span className="acc-name">{`${user.prenom ?? ""} ${user.nom ?? ""}`.trim() || user.email}</span>
@@ -85,7 +86,8 @@ export default function ProfilPage() {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-7-5-7-11a7 7 0 0 1 14 0c0 6-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
               Centre Subsidium à proximité
             </b>
-            <p>Centre Subsidium {user.ville ? `de ${user.ville}` : "le plus proche"} — adresse communiquée prochainement.</p>
+            <p>Centre Subsidium {user.ville ? `de ${user.ville}` : "le plus proche"} — retrouvez les structures et centres labellisés près de chez vous.</p>
+            <Link href="/organisations" className="btn btn-ghost btn-sm" style={{ marginTop: 8, display: "inline-block" }}>Voir les organisations</Link>
           </div>
 
           <div className="acc-actions">
@@ -94,7 +96,6 @@ export default function ProfilPage() {
           </div>
         </section>
 
-        {/* ----- Colonne droite ----- */}
         <section className="acc-right">
           <div className="acc-cards2">
             {user.badge_n2 ? (
@@ -106,24 +107,32 @@ export default function ProfilPage() {
             ) : (
               <div className="badge-card">
                 <h3>Obtenir le badge Initiateur</h3>
-                <p>Votre palier actuel est « {palier} ». Poursuivez votre engagement pour viser le badge Initiateur N2.</p>
+                <p>Votre palier actuel est « {palier} ». Passez l'auto-évaluation pour viser le badge Initiateur N2.</p>
+                <Link href="/auto-evaluation" className="btn btn-coral btn-sm" style={{ marginTop: 8, display: "inline-block" }}>Commencer l'auto-évaluation</Link>
               </div>
             )}
 
             <div className="parrain-card">
               <h3>Parrainer des amis</h3>
               <p>Invitez vos proches à rejoindre le mouvement et à agir près de chez eux.</p>
-              <button className="btn btn-ghost btn-sm" type="button" title="Bientôt disponible">En savoir plus</button>
+              {prefs && (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontWeight: 800, color: "#372646", letterSpacing: ".04em", background: "#FCF6F0", border: "1px dashed #E3D7CC", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>{prefs.parrainage}</div>
+                  <button className="btn btn-ghost btn-sm" type="button" onClick={copierLien} style={{ marginTop: 8 }}>{copied ? "Lien copié ✔" : "Copier le lien d'invitation"}</button>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="setting-row">
             <span className="lbl"><b>Abonnement</b><small>Aucun abonnement</small></span>
-            <button className="btn btn-ghost btn-sm" type="button" title="Bientôt disponible">Gérer</button>
+            <Link href="/paiement" className="btn btn-ghost btn-sm">Gérer</Link>
           </div>
           <div className="setting-row">
-            <span className="lbl"><b>Choix de la langue</b><small>Français</small></span>
-            <button className="btn btn-ghost btn-sm" type="button" title="Bientôt disponible">Modifier</button>
+            <span className="lbl"><b>Choix de la langue</b><small>{langSaved ? "Enregistré ✔" : langueLabel}</small></span>
+            <select value={prefs?.langue || "fr"} onChange={(e) => changeLangue(e.target.value)} disabled={!prefs} style={{ border: "1px solid #E3D7CC", borderRadius: 10, padding: "7px 10px", color: "#372646", background: "#FCF9F6", fontSize: 14 }}>
+              {(prefs?.langues || [{ code: "fr", label: "Français" }]).map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+            </select>
           </div>
           <div className="setting-row">
             <span className="lbl"><b>Préférence du pays</b><small>{user.pays || "Non renseigné"}</small></span>
