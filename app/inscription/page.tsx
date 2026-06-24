@@ -20,7 +20,7 @@ export default function InscriptionPage() {
   const [pwd2, setPwd2] = useState("");
   // Étape 2
   const [perso, setPerso] = useState<Perso>({ nom: "", prenom: "", situation: "", ville: "", pays: "" });
-  // Étape 3 : auto-évaluation (questionnaire ou agent, au choix)
+  // Étape 3 : auto-évaluation (questionnaire ou agent, au choix — facultative)
   const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
   // Étape 4
   const [accepted, setAccepted] = useState(false);
@@ -206,15 +206,47 @@ export default function InscriptionPage() {
         </>
       )}
 
-      {/* ---------- Étape 3 : auto-évaluation au choix ---------- */}
+      {/* ---------- Étape 3 : auto-évaluation au choix (facultative) ---------- */}
       {step === 2 && (
         <>
           <h1 className="h-form">Mon auto-évaluation éthique</h1>
           <p className="sub">
-            Évaluez votre maturité citoyenne sur les dimensions de la grille éthique. Choisissez votre
-            format : un questionnaire guidé, ou un entretien accompagné avec un agent SUBSIDIUM.
+            Cette étape est <b>facultative</b>. Elle vous aide simplement à situer votre maturité citoyenne
+            sur les dimensions de la grille éthique : il n'y a ni bonne ni mauvaise réponse, et aucun score
+            minimum n'est requis pour rejoindre la communauté.
           </p>
-          <EvalFlow onResult={setEvalSummary} />
+          <p className="sub">
+            Choisissez votre format — un <b>questionnaire guidé</b> (rapide et autonome) ou un{" "}
+            <b>entretien accompagné</b> avec un agent SUBSIDIUM — ou bien <b>passez cette étape</b> et
+            réalisez-la plus tard depuis votre compte.
+          </p>
+
+          <EvalFlow onResult={setEvalSummary} onSkip={() => setStep(3)} />
+
+          <div
+            style={{
+              marginTop: 18,
+              background: "#FBF4EC",
+              border: "1px solid #EBD9CD",
+              borderLeft: "4px solid #F27B6A",
+              borderRadius: 12,
+              padding: "14px 18px",
+            }}
+          >
+            <p style={{ margin: "0 0 6px", fontWeight: 700, color: "#372646" }}>
+              Prochaine étape : la Charte d'engagement
+            </p>
+            <p style={{ margin: "0 0 8px", color: "#5E4A73" }}>
+              La Charte n'est pas un test idéologique ni un examen : c'est un engagement de cohérence. En la
+              signant, vous devenez <b>Refondateur</b> et vous débloquez l'accès aux actions de la plateforme :
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 20, color: "#5E4A73" }}>
+              <li>Proposer vos idées et lancer des initiatives</li>
+              <li>Participer aux débats citoyens et soutenir les idées qui vous tiennent à cœur</li>
+              <li>Accéder au contenu réservé aux membres</li>
+              <li>Progresser vers les niveaux supérieurs (projets, missions, market-place, clubs)</li>
+            </ul>
+          </div>
         </>
       )}
 
@@ -251,8 +283,8 @@ export default function InscriptionPage() {
         {step === 0 && <button className="btn btn-coral" onClick={next}>Valider mes informations</button>}
         {step === 1 && <button className="btn btn-coral" onClick={next}>Valider mes informations</button>}
         {step === 2 && (
-          <button className="btn btn-coral" onClick={() => setStep(3)} disabled={!evalSummary}>
-            Continuer vers la charte
+          <button className="btn btn-coral" onClick={() => setStep(3)}>
+            {evalSummary ? "Continuer vers la charte" : "Passer et continuer vers la charte"}
           </button>
         )}
         {step === 3 && <button className="btn btn-coral" onClick={finish} disabled={busy}>{busy ? "Création du compte…" : "Signer et finaliser mon inscription"}</button>}
