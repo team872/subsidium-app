@@ -3,12 +3,12 @@
 import { useState } from "react";
 import AutoEvalChat, { EvalSummary } from "@/components/AutoEvalChat";
 import QuestionnaireForm from "@/components/QuestionnaireForm";
+import { useT } from "@/components/LangProvider";
 
 type Mode = "choix" | "form" | "chat";
 
-// Étape d'auto-évaluation « au choix » : l'utilisateur sélectionne le questionnaire
-// guidé (formulaire écran-par-écran), l'entretien avec l'agent IA (chat), ou peut
-// passer cette étape facultative pour aller directement à la Charte.
+// Etape d'auto-evaluation « au choix » : questionnaire guide, entretien avec l'agent IA,
+// ou possibilite de passer cette etape facultative pour aller directement a la Charte.
 export default function EvalFlow({
   onResult,
   onSkip,
@@ -17,11 +17,12 @@ export default function EvalFlow({
   onSkip?: () => void;
 }) {
   const [mode, setMode] = useState<Mode>("choix");
+  const t = useT();
 
   if (mode === "form") {
     return (
       <div>
-        <button type="button" onClick={() => setMode("choix")} style={backLink}>← Changer de mode</button>
+        <button type="button" onClick={() => setMode("choix")} style={backLink}>{t("eval.changeMode")}</button>
         <QuestionnaireForm onResult={(s) => onResult?.(s)} />
       </div>
     );
@@ -29,7 +30,7 @@ export default function EvalFlow({
   if (mode === "chat") {
     return (
       <div>
-        <button type="button" onClick={() => setMode("choix")} style={backLink}>← Changer de mode</button>
+        <button type="button" onClick={() => setMode("choix")} style={backLink}>{t("eval.changeMode")}</button>
         <AutoEvalChat onResult={(s) => onResult?.(s)} />
       </div>
     );
@@ -39,18 +40,18 @@ export default function EvalFlow({
     <div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <Card
-          title="Questionnaire guidé"
-          desc="Répondez aux énoncés, dimension par dimension, sur une échelle simple (Jamais → Toujours). Rapide et autonome."
-          cta="Commencer le questionnaire"
+          title={t("eval.q.title")}
+          desc={t("eval.q.desc")}
+          cta={t("eval.q.cta")}
           onClick={() => setMode("form")}
           icon={
             <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
           }
         />
         <Card
-          title="Entretien avec l'agent IA"
-          desc="Un échange accompagné avec un agent SUBSIDIUM, qui explore votre engagement avec vos propres mots."
-          cta="Commencer l'entretien"
+          title={t("eval.chat.title")}
+          desc={t("eval.chat.desc")}
+          cta={t("eval.chat.cta")}
           onClick={() => setMode("chat")}
           icon={
             <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z" />
@@ -61,10 +62,10 @@ export default function EvalFlow({
       {onSkip && (
         <div style={{ marginTop: 16, textAlign: "center" }}>
           <button type="button" onClick={onSkip} style={skipLink}>
-            Passer cette étape pour l'instant
+            {t("insc.s3.skip")}
           </button>
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "#8A7C97" }}>
-            Vous pourrez réaliser votre auto-évaluation plus tard depuis votre compte.
+            {t("insc.s3.skipHint")}
           </p>
         </div>
       )}

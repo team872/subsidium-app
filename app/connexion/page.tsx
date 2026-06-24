@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
+import { useT } from "@/components/LangProvider";
 
 export default function ConnexionPage() {
   const router = useRouter();
+  const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,7 +18,7 @@ export default function ConnexionPage() {
     e.preventDefault();
     setError("");
     if (!email || !password) {
-      setError("Veuillez renseigner votre adresse mail et votre mot de passe.");
+      setError(t("auth.login.err.empty"));
       return;
     }
     setBusy(true);
@@ -28,31 +30,29 @@ export default function ConnexionPage() {
       });
       const d = await r.json();
       if (!r.ok) {
-        setError(d.error || "Connexion impossible.");
+        setError(d.error || t("auth.login.err.fail"));
         setBusy(false);
         return;
       }
       router.push("/accueil");
     } catch {
-      setError("Connexion impossible pour le moment.");
+      setError(t("auth.login.err.offline"));
       setBusy(false);
     }
   }
 
   return (
     <AuthShell>
-      <h1 className="h-form">Accédez à votre compte</h1>
-      <p className="sub">
-        Pour vous connecter à votre compte, veuillez renseigner votre adresse mail et votre mot de passe.
-      </p>
+      <h1 className="h-form">{t("auth.login.title")}</h1>
+      <p className="sub">{t("auth.login.sub")}</p>
 
       <form onSubmit={onSubmit} noValidate>
         <div className="field">
-          <label htmlFor="email">Adresse mail</label>
+          <label htmlFor="email">{t("auth.email")}</label>
           <input
             id="email"
             type="email"
-            placeholder="Saisissez votre adresse mail"
+            placeholder={t("auth.email.ph")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
@@ -60,11 +60,11 @@ export default function ConnexionPage() {
         </div>
 
         <div className="field">
-          <label htmlFor="password">Mot de passe</label>
+          <label htmlFor="password">{t("auth.password")}</label>
           <input
             id="password"
             type="password"
-            placeholder="Saisissez votre mot de passe"
+            placeholder={t("auth.password.ph")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
@@ -72,21 +72,21 @@ export default function ConnexionPage() {
         </div>
 
         <div className="between">
-          <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+          <Link href="/mot-de-passe-oublie">{t("auth.forgot")}</Link>
         </div>
 
         {error && <p className="msg" style={{ marginBottom: 14 }}>{error}</p>}
 
         <div className="actions-end">
           <button type="submit" className="btn btn-coral" disabled={busy}>
-            {busy ? "Connexion…" : "Se connecter"}
+            {busy ? t("auth.login.busy") : t("auth.login.cta")}
           </button>
         </div>
       </form>
 
       <p className="foot-note">
-        Si vous ne disposez pas d'espace sur Subsidium, créez votre compte :{" "}
-        <Link href="/inscription">Créez votre compte !</Link>
+        {t("auth.noAccount")}{" "}
+        <Link href="/inscription">{t("auth.createAccount")}</Link>
       </p>
     </AuthShell>
   );

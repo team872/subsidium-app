@@ -1,5 +1,6 @@
 import Illustration from "./Illustration";
 import Brand from "./Brand";
+import AuthLang from "./AuthLang";
 
 export default function AuthShell({
   children,
@@ -17,7 +18,10 @@ export default function AuthShell({
           </div>
           <Illustration />
         </aside>
-        <div className="shell-main">{children}</div>
+        <div className="shell-main" style={{ position: "relative" }}>
+          <AuthLang />
+          {children}
+        </div>
       </section>
     </main>
   );
