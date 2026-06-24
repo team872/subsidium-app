@@ -118,6 +118,9 @@ export default function ProjetDetailPage() {
           ) : projet.desc ? <p className="txt">{projet.desc}</p> : null}
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+            {(role === "owner" || role === "membre") && (
+              <Link href={`/projets/${id}/atelier`} className="btn btn-coral">Espace de travail →</Link>
+            )}
             {!isOwner && role !== "membre" && (
               <button className={role === "suiveur" ? "btn btn-ghost" : "btn btn-coral"} onClick={toggleSuivre} disabled={busy}>
                 {role === "suiveur" ? "Ne plus suivre" : "Suivre le projet"}
