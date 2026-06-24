@@ -5,6 +5,7 @@ import { NIVEAUX, clampNiveau } from "@/lib/niveau";
 
 // Barre de navigation TEST (aperçu rendu-seul). Rendue uniquement si compte test.
 // Les fleches changent le niveau AFFICHE via un cookie d'index (aucune ecriture en base).
+// Raccourcis démo : ouvrir l'écran d'Inscription et l'écran de Paiement (simulé).
 const COOKIE = "sub_preview";
 
 function setPreview(index: number | null) {
@@ -29,6 +30,11 @@ function btnStyle(disabled: boolean): React.CSSProperties {
   };
 }
 
+const ghost: React.CSSProperties = {
+  background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.4)",
+  borderRadius: 999, padding: "4px 10px", fontSize: 11.5, cursor: "pointer", opacity: 0.9,
+};
+
 const Chevron = ({ dir }: { dir: "left" | "right" }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     {dir === "left" ? <path d="M15 6l-6 6 6 6" /> : <path d="M9 6l6 6-6 6" />}
@@ -46,6 +52,7 @@ export default function TestBar({ niveau, isTest }: { niveau: number; isTest: bo
     await fetch("/app/api/test/reset", { method: "POST" }).catch(() => {});
     setPreview(null); // efface l'aperçu + recharge : retour à Visiteur (niveau réel remis à 0)
   }
+  const open = (path: string) => { window.location.href = path; };
   return (
     <div
       style={{
@@ -56,7 +63,10 @@ export default function TestBar({ niveau, isTest }: { niveau: number; isTest: bo
         zIndex: 9999,
         display: "flex",
         alignItems: "center",
-        gap: 10,
+        gap: 8,
+        flexWrap: "wrap",
+        justifyContent: "center",
+        maxWidth: "calc(100vw - 24px)",
         background: "#372646",
         color: "#fff",
         borderRadius: 999,
@@ -78,20 +88,14 @@ export default function TestBar({ niveau, isTest }: { niveau: number; isTest: bo
       <button onClick={() => go(1)} disabled={idx >= NIVEAUX.length - 1} style={btnStyle(idx >= NIVEAUX.length - 1)} aria-label="Niveau suivant" title="Niveau suivant">
         <Chevron dir="right" />
       </button>
-      <button
-        onClick={() => setPreview(null)}
-        style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.4)", borderRadius: 999, padding: "4px 10px", fontSize: 11.5, cursor: "pointer", opacity: 0.9 }}
-        title="Revenir au niveau réel du compte"
-      >
-        Réel
-      </button>
-      <button
-        onClick={resetParcours}
-        style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.4)", borderRadius: 999, padding: "4px 10px", fontSize: 11.5, cursor: "pointer", opacity: 0.9 }}
-        title="Réinitialiser le parcours et repartir de Visiteur (compte test)"
-      >
-        ↺ Réinitialiser
-      </button>
+      <button onClick={() => setPreview(null)} style={ghost} title="Revenir au niveau réel du compte">Réel</button>
+      <button onClick={resetParcours} style={ghost} title="Réinitialiser le parcours et repartir de Visiteur (compte test)">↺ Réinitialiser</button>
+
+      <span style={{ width: 1, height: 18, background: "rgba(255,255,255,.25)", margin: "0 2px" }} aria-hidden="true" />
+      <span style={{ fontSize: 10.5, opacity: 0.6 }}>ÉCRANS</span>
+      <button onClick={() => open("/app/inscription")} style={ghost} title="Voir l'écran d'inscription du visiteur">Inscription</button>
+      <button onClick={() => open("/app/charte")} style={ghost} title="Voir l'écran d'adhésion à la Charte">Charte</button>
+      <button onClick={() => open("/app/paiement")} style={ghost} title="Voir la simulation de paiement de l'adhésion">Paiement</button>
     </div>
   );
 }
