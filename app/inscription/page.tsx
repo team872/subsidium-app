@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
 import Stepper from "@/components/Stepper";
@@ -29,6 +29,16 @@ export default function InscriptionPage() {
 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // MODE DEMO : reserve aux comptes de test (meme detection que la barre MODE TEST).
+  // Permet de sauter directement a n'importe quelle etape sans remplir les formulaires.
+  const [demo, setDemo] = useState(false);
+  useEffect(() => {
+    fetch("/app/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setDemo(!!d.isTest))
+      .catch(() => {});
+  }, []);
 
   function back() {
     setError("");
@@ -93,6 +103,47 @@ export default function InscriptionPage() {
       setError(t("insc.err.registerOffline"));
       setBusy(false);
     }
+  }
+
+  // Barre flottante MODE DEMO (comptes test uniquement).
+  function DemoBar() {
+    if (!demo || done) return null;
+    const labels = [t("insc.step1"), t("insc.step2"), t("insc.step3"), t("insc.step4")];
+    return (
+      <div
+        style={{
+          position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9999,
+          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "center",
+          maxWidth: "calc(100vw - 24px)", background: "#372646", color: "#fff", borderRadius: 999,
+          padding: "8px 14px", boxShadow: "0 10px 28px rgba(55,38,70,.35)", fontSize: 13,
+          fontFamily: "system-ui, Arial, sans-serif",
+        }}
+        role="region"
+        aria-label="Navigation de demo de l'inscription"
+      >
+        <strong style={{ letterSpacing: ".07em", fontSize: 10.5, opacity: 0.75 }}>MODE DÉMO</strong>
+        <span style={{ fontSize: 10.5, opacity: 0.6 }}>PASSER À L'ÉTAPE</span>
+        {[0, 1, 2, 3].map((i) => {
+          const activeStep = step === i;
+          return (
+            <button
+              key={i}
+              onClick={() => { setError(""); setStep(i); }}
+              title={labels[i]}
+              style={{
+                background: activeStep ? "#F27B6A" : "transparent",
+                color: "#fff",
+                border: activeStep ? "none" : "1px solid rgba(255,255,255,.4)",
+                borderRadius: 999, width: 28, height: 28, cursor: "pointer",
+                fontWeight: 700, fontSize: 13,
+              }}
+            >
+              {i + 1}
+            </button>
+          );
+        })}
+      </div>
+    );
   }
 
   /* ---------- ecran de fin ---------- */
@@ -269,6 +320,8 @@ export default function InscriptionPage() {
         )}
         {step === 3 && <button className="btn btn-coral" onClick={finish} disabled={busy}>{busy ? t("insc.s4.busy") : t("insc.s4.cta")}</button>}
       </div>
+
+      <DemoBar />
     </AuthShell>
   );
 }
