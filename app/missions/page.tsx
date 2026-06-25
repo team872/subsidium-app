@@ -3,42 +3,78 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import { useLang } from "@/components/LangProvider";
 import { useNiveau } from "@/components/useNiveau";
 import { peutPorterInitiative, prochaineEtape } from "@/lib/niveau";
 import "@/components/MemberBoards.css";
 
 type Mission = { id: number; type: string; color: string; title: string; org: string; desc: string; location: string | null; date: string };
 type MyMission = Mission & { statut: "en_attente" | "acceptee" | "refusee" };
+type Dict = Record<string, string>;
 
-const TABS = [
-  { key: "toutes", label: "Toutes les missions" },
-  { key: "candidatees", label: "Missions candidatées" },
-] as const;
-type TabKey = (typeof TABS)[number]["key"];
+const DICT: Record<string, Dict> = {
+  fr: {
+    title: "Missions et opportunités",
+    gated: "Cet espace est réservé aux Initiateurs. Réalisez votre auto-évaluation pour débloquer les missions et candidater.",
+    tabToutes: "Toutes les missions", tabCand: "Missions candidatées",
+    search: "Saisissez une ville, un code postal, un département, etc.",
+    allTypes: "Tous les types", allStatus: "Tous les statuts",
+    stPending: "En attente", stAccepted: "Acceptée", stRejected: "Refusée",
+    candPending: "Candidature en attente", candAccepted: "Candidature acceptée", candRejected: "Candidature refusée",
+    loading: "Chargement des missions…", emptyAll: "Aucune mission ne correspond à votre recherche.", emptyMine: "Vous n'avez pas encore candidaté à une mission.",
+    by: "Par", typeVol: "Bénévolat",
+  },
+  en: {
+    title: "Missions and opportunities",
+    gated: "This area is reserved for Initiators. Complete your self-assessment to unlock missions and apply.",
+    tabToutes: "All missions", tabCand: "My applications",
+    search: "Enter a city, postcode, department, etc.",
+    allTypes: "All types", allStatus: "All statuses",
+    stPending: "Pending", stAccepted: "Accepted", stRejected: "Rejected",
+    candPending: "Application pending", candAccepted: "Application accepted", candRejected: "Application declined",
+    loading: "Loading missions…", emptyAll: "No mission matches your search.", emptyMine: "You haven't applied to any mission yet.",
+    by: "By", typeVol: "Volunteering",
+  },
+  it: {
+    title: "Missioni e opportunità",
+    gated: "Questo spazio è riservato agli Iniziatori. Completa la tua autovalutazione per sbloccare le missioni e candidarti.",
+    tabToutes: "Tutte le missioni", tabCand: "Le mie candidature",
+    search: "Inserisci una città, un CAP, un dipartimento, ecc.",
+    allTypes: "Tutti i tipi", allStatus: "Tutti gli stati",
+    stPending: "In attesa", stAccepted: "Accettata", stRejected: "Rifiutata",
+    candPending: "Candidatura in attesa", candAccepted: "Candidatura accettata", candRejected: "Candidatura rifiutata",
+    loading: "Caricamento delle missioni…", emptyAll: "Nessuna missione corrisponde alla ricerca.", emptyMine: "Non hai ancora inviato candidature.",
+    by: "Di", typeVol: "Volontariato",
+  },
+};
 
 const TYPES = ["Bénévolat", "CDI", "CDD"];
+function typeLabel(t: string, tr: Dict) { return t === "Bénévolat" ? tr.typeVol : t; }
 
-const STATUT: Record<string, { label: string; bg: string; fg: string }> = {
-  acceptee: { label: "Candidature acceptée", bg: "#DBF0D9", fg: "#1E6B1E" },
-  refusee: { label: "Candidature refusée", bg: "#FBDED7", fg: "#B23A28" },
-  en_attente: { label: "Candidature en attente", bg: "#ECE6F0", fg: "#5E4A73" },
+const STATUT_COLOR: Record<string, { bg: string; fg: string }> = {
+  acceptee: { bg: "#DBF0D9", fg: "#1E6B1E" },
+  refusee: { bg: "#FBDED7", fg: "#B23A28" },
+  en_attente: { bg: "#ECE6F0", fg: "#5E4A73" },
 };
 
 function Card({ m, statut }: { m: Mission; statut?: string }) {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
+  const candLabel: Record<string, string> = { acceptee: tr.candAccepted, refusee: tr.candRejected, en_attente: tr.candPending };
   return (
     <Link href={`/missions/${m.id}`} className="icard" key={m.id}>
-      <div className="band" style={{ background: m.color }}><span>{m.type}</span></div>
+      <div className="band" style={{ background: m.color }}><span>{typeLabel(m.type, tr)}</span></div>
       <div className="bd">
         <h3>{m.title}</h3>
         <p>{m.desc}</p>
         <div className="foot">
-          <span className="auth">Par {m.org}</span>
+          <span className="auth">{tr.by} {m.org}</span>
           <span>{m.date}</span>
         </div>
         {statut && (
           <div style={{ marginTop: 10 }}>
-            <span style={{ background: STATUT[statut].bg, color: STATUT[statut].fg, fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "4px 10px" }}>
-              {STATUT[statut].label}
+            <span style={{ background: STATUT_COLOR[statut].bg, color: STATUT_COLOR[statut].fg, fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "4px 10px" }}>
+              {candLabel[statut]}
             </span>
           </div>
         )}
@@ -48,8 +84,10 @@ function Card({ m, statut }: { m: Mission; statut?: string }) {
 }
 
 export default function MissionsPage() {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   const { rang, ready } = useNiveau();
-  const [tab, setTab] = useState<TabKey>("toutes");
+  const [tab, setTab] = useState<"toutes" | "candidatees">("toutes");
   const [missions, setMissions] = useState<Mission[]>([]);
   const [mine, setMine] = useState<MyMission[]>([]);
   const [query, setQuery] = useState("");
@@ -75,10 +113,8 @@ export default function MissionsPage() {
     const etape = prochaineEtape(rang);
     return (
       <AppShell>
-        <div className="board-head"><h1>Missions et opportunités</h1></div>
-        <p className="board-empty">
-          Cet espace est réservé aux <b>Initiateurs</b>. Réalisez votre auto-évaluation pour débloquer les missions et candidater.
-        </p>
+        <div className="board-head"><h1>{tr.title}</h1></div>
+        <p className="board-empty">{tr.gated}</p>
         {etape && <Link href={etape.href} className="btn btn-coral" style={{ display: "inline-block" }}>{etape.label}</Link>}
       </AppShell>
     );
@@ -86,40 +122,39 @@ export default function MissionsPage() {
 
   return (
     <AppShell>
-      <div className="board-head"><h1>Missions et opportunités</h1></div>
+      <div className="board-head"><h1>{tr.title}</h1></div>
 
       <div className="board-tabs">
-        {TABS.map((t) => (
-          <button key={t.key} className={tab === t.key ? "on" : ""} onClick={() => setTab(t.key)}>{t.label}</button>
-        ))}
+        <button className={tab === "toutes" ? "on" : ""} onClick={() => setTab("toutes")}>{tr.tabToutes}</button>
+        <button className={tab === "candidatees" ? "on" : ""} onClick={() => setTab("candidatees")}>{tr.tabCand}</button>
       </div>
 
       <div className="board-tools">
         <div className="board-search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Saisissez une ville, un code postal, un département, etc." />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr.search} />
         </div>
         {tab === "toutes" ? (
           <select className="board-select" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="">Tous les types</option>
-            {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            <option value="">{tr.allTypes}</option>
+            {TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, tr)}</option>)}
           </select>
         ) : (
           <select className="board-select" value={statut} onChange={(e) => setStatut(e.target.value)}>
-            <option value="">Tous les statuts</option>
-            <option value="en_attente">En attente</option>
-            <option value="acceptee">Acceptée</option>
-            <option value="refusee">Refusée</option>
+            <option value="">{tr.allStatus}</option>
+            <option value="en_attente">{tr.stPending}</option>
+            <option value="acceptee">{tr.stAccepted}</option>
+            <option value="refusee">{tr.stRejected}</option>
           </select>
         )}
       </div>
 
       {tab === "toutes" ? (
-        loading ? <p className="board-empty">Chargement des missions…</p>
-        : toutes.length === 0 ? <p className="board-empty">Aucune mission ne correspond à votre recherche.</p>
+        loading ? <p className="board-empty">{tr.loading}</p>
+        : toutes.length === 0 ? <p className="board-empty">{tr.emptyAll}</p>
         : <div className="idees-grid">{toutes.map((m) => <Card key={m.id} m={m} />)}</div>
       ) : (
-        candidatees.length === 0 ? <p className="board-empty">Vous n'avez pas encore candidaté à une mission.</p>
+        candidatees.length === 0 ? <p className="board-empty">{tr.emptyMine}</p>
         : <div className="idees-grid">{candidatees.map((m) => <Card key={m.id} m={m} statut={m.statut} />)}</div>
       )}
     </AppShell>
