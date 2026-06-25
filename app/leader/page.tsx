@@ -2,12 +2,52 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import { useLang } from "@/components/LangProvider";
 import "@/components/MemberBoards.css";
 
 type Step = { key: string; titre: string; contenu: string };
 type Cert = { statut: "en_attente" | "certifie" | "refuse" } | null;
+type Dict = Record<string, string>;
+
+const DICT: Record<string, Dict> = {
+  fr: {
+    title: "Parcours Leader",
+    intro: "Le parcours Leader prépare les Initiateurs à devenir Refondateurs Certifiés : porter la doctrine, animer un collectif et faire grandir d'autres citoyens. Parcourez les étapes, puis demandez votre certification — elle sera validée par l'équipe Subsidium.",
+    loading: "Chargement…",
+    certified: "✔ Vous êtes Refondateur Certifié (Leader). Vous pouvez créer et animer des Clubs.",
+    markUndone: "Marquer non terminé", markDone: "Marquer terminé", step: "Étape",
+    pending: "Votre demande de certification est en attente de validation par l'équipe Subsidium.",
+    refused: "Votre précédente demande n'a pas été retenue. Vous pouvez la représenter.",
+    request: "Demander la certification Leader", sending: "Envoi…",
+    finishHint1: "Terminez les", finishHint2: "étapes pour pouvoir demander votre certification.", reqErr: "Demande impossible.",
+  },
+  en: {
+    title: "Leader Path",
+    intro: "The Leader Path prepares Initiators to become Certified Refounders: carrying the doctrine, leading a group and helping other citizens grow. Go through the steps, then request your certification — it will be validated by the Subsidium team.",
+    loading: "Loading…",
+    certified: "✔ You are a Certified Refounder (Leader). You can create and run Clubs.",
+    markUndone: "Mark as not done", markDone: "Mark as done", step: "Step",
+    pending: "Your certification request is awaiting validation by the Subsidium team.",
+    refused: "Your previous request was not accepted. You can submit it again.",
+    request: "Request Leader certification", sending: "Sending…",
+    finishHint1: "Complete the", finishHint2: "steps to request your certification.", reqErr: "Request failed.",
+  },
+  it: {
+    title: "Percorso Leader",
+    intro: "Il Percorso Leader prepara gli Iniziatori a diventare Rifondatori Certificati: portare la dottrina, animare un collettivo e far crescere altri cittadini. Segui le tappe, poi richiedi la tua certificazione — sarà convalidata dal team Subsidium.",
+    loading: "Caricamento…",
+    certified: "✔ Sei un Rifondatore Certificato (Leader). Puoi creare e animare dei Club.",
+    markUndone: "Segna come non completato", markDone: "Segna come completato", step: "Tappa",
+    pending: "La tua richiesta di certificazione è in attesa di convalida da parte del team Subsidium.",
+    refused: "La tua richiesta precedente non è stata accettata. Puoi ripresentarla.",
+    request: "Richiedi la certificazione Leader", sending: "Invio…",
+    finishHint1: "Completa le", finishHint2: "tappe per richiedere la certificazione.", reqErr: "Richiesta impossibile.",
+  },
+};
 
 export default function LeaderPage() {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   const [steps, setSteps] = useState<Step[]>([]);
   const [done, setDone] = useState<string[]>([]);
   const [cert, setCert] = useState<Cert>(null);
@@ -22,7 +62,7 @@ export default function LeaderPage() {
   }, []);
 
   async function toggle(key: string, isDone: boolean) {
-    setDone((d) => (isDone ? d.filter((k) => k !== key) : [...d, key])); // optimiste
+    setDone((d) => (isDone ? d.filter((k) => k !== key) : [...d, key]));
     try {
       const r = await fetch("/app/api/leader/step", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, done: !isDone }) });
       const data = await r.json();
@@ -35,9 +75,9 @@ export default function LeaderPage() {
     try {
       const r = await fetch("/app/api/leader/certification", { method: "POST" });
       const d = await r.json();
-      if (!r.ok) { setError(d.error || "Demande impossible."); setBusy(false); return; }
+      if (!r.ok) { setError(d.error || tr.reqErr); setBusy(false); return; }
       setCert(d.certification || { statut: "en_attente" });
-    } catch { setError("Demande impossible."); }
+    } catch { setError(tr.reqErr); }
     setBusy(false);
   }
 
@@ -48,18 +88,14 @@ export default function LeaderPage() {
 
   return (
     <AppShell>
-      <div className="board-head"><h1>Parcours Leader</h1></div>
-      <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 18px", lineHeight: 1.6 }}>
-        Le parcours Leader prépare les Initiateurs à devenir <b>Refondateurs Certifiés</b> : porter la doctrine,
-        animer un collectif et faire grandir d'autres citoyens. Parcourez les étapes, puis demandez votre certification —
-        elle sera validée par l'équipe Subsidium.
-      </p>
+      <div className="board-head"><h1>{tr.title}</h1></div>
+      <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 18px", lineHeight: 1.6 }}>{tr.intro}</p>
 
-      {loading ? <p className="board-empty">Chargement…</p> : (
+      {loading ? <p className="board-empty">{tr.loading}</p> : (
         <div style={{ maxWidth: 760 }}>
           {cert?.statut === "certifie" && (
             <div style={{ background: "#DBF0D9", border: "1px solid #B6E0B0", borderRadius: 14, padding: "14px 16px", marginBottom: 16, color: "#1E6B1E", fontWeight: 700 }}>
-              ✔ Vous êtes Refondateur Certifié (Leader). Vous pouvez créer et animer des Clubs.
+              {tr.certified}
             </div>
           )}
 
@@ -75,11 +111,11 @@ export default function LeaderPage() {
               const isDone = done.includes(s.key);
               return (
                 <div key={s.key} style={{ border: "1px solid #EBD9CD", borderRadius: 14, padding: "14px 16px", background: isDone ? "#FCFBF8" : "#fff", display: "flex", gap: 14 }}>
-                  <button onClick={() => toggle(s.key, isDone)} aria-label={isDone ? "Marquer non terminé" : "Marquer terminé"} style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: isDone ? "none" : "2px solid #E3D7CC", background: isDone ? "#5E8A57" : "#fff", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
+                  <button onClick={() => toggle(s.key, isDone)} aria-label={isDone ? tr.markUndone : tr.markDone} style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: isDone ? "none" : "2px solid #E3D7CC", background: isDone ? "#5E8A57" : "#fff", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
                     {isDone && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}
                   </button>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: "#9C919E", textTransform: "uppercase", letterSpacing: ".03em" }}>Étape {i + 1}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#9C919E", textTransform: "uppercase", letterSpacing: ".03em" }}>{tr.step} {i + 1}</div>
                     <h3 style={{ margin: "2px 0 6px", color: "#372646" }}>{s.titre}</h3>
                     <p style={{ color: "#5E4A73", fontSize: 14, margin: 0, lineHeight: 1.55 }}>{s.contenu}</p>
                   </div>
@@ -91,15 +127,15 @@ export default function LeaderPage() {
           <div style={{ marginTop: 20, borderTop: "1px solid #F0E6DD", paddingTop: 18 }}>
             {cert?.statut === "en_attente" ? (
               <div style={{ background: "#FCE3B4", border: "1px solid #F0D08A", borderRadius: 12, padding: "12px 16px", color: "#8A5A00", fontWeight: 700 }}>
-                Votre demande de certification est en attente de validation par l'équipe Subsidium.
+                {tr.pending}
               </div>
             ) : cert?.statut === "certifie" ? null : (
               <>
-                {cert?.statut === "refuse" && <p style={{ color: "#9C2A2A", marginBottom: 8 }}>Votre précédente demande n'a pas été retenue. Vous pouvez la représenter.</p>}
+                {cert?.statut === "refuse" && <p style={{ color: "#9C2A2A", marginBottom: 8 }}>{tr.refused}</p>}
                 <button className="btn btn-coral" onClick={demander} disabled={busy || !tousFaits}>
-                  {busy ? "Envoi…" : "Demander la certification Leader"}
+                  {busy ? tr.sending : tr.request}
                 </button>
-                {!tousFaits && <p style={{ color: "#9C919E", fontSize: 13, marginTop: 8 }}>Terminez les {total} étapes pour pouvoir demander votre certification.</p>}
+                {!tousFaits && <p style={{ color: "#9C919E", fontSize: 13, marginTop: 8 }}>{tr.finishHint1} {total} {tr.finishHint2}</p>}
                 {error && <p className="msg" style={{ marginTop: 8 }}>{error}</p>}
               </>
             )}
