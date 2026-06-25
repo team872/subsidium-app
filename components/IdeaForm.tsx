@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CATEGORIES } from "@/lib/feed";
 import type { IdeaDTO } from "@/lib/data";
 import { useLang } from "@/components/LangProvider";
+import ImagePicker from "@/components/ImagePicker";
+import { keywordsFromText } from "@/lib/keywords";
 
 type Dict = Record<string, string>;
 const DICT: Record<string, Dict> = {
@@ -13,7 +15,7 @@ const DICT: Record<string, Dict> = {
     fLoc: "Localisation", phLoc: "Nom de ville, département, etc.",
     fCat: "Thématique traitée", select: "Sélectionner",
     fDesc: "Description", phDesc: "Description",
-    fImages: "Ajouter des images", soon: "Bientôt disponible",
+    fImages: "Ajouter une image",
     reqFields: "Titre, thématique et description sont requis.",
     pubErr: "Publication impossible.", pubErr2: "Publication impossible pour le moment.",
     needLogin: "Connectez-vous pour publier votre idée.", login: "Se connecter",
@@ -25,7 +27,7 @@ const DICT: Record<string, Dict> = {
     fLoc: "Location", phLoc: "City name, department, etc.",
     fCat: "Topic", select: "Select",
     fDesc: "Description", phDesc: "Description",
-    fImages: "Add images", soon: "Coming soon",
+    fImages: "Add an image",
     reqFields: "Title, topic and description are required.",
     pubErr: "Could not publish.", pubErr2: "Could not publish for now.",
     needLogin: "Log in to publish your idea.", login: "Log in",
@@ -37,7 +39,7 @@ const DICT: Record<string, Dict> = {
     fLoc: "Localizzazione", phLoc: "Nome della città, dipartimento, ecc.",
     fCat: "Tematica trattata", select: "Seleziona",
     fDesc: "Descrizione", phDesc: "Descrizione",
-    fImages: "Aggiungi immagini", soon: "Presto disponibile",
+    fImages: "Aggiungi un'immagine",
     reqFields: "Titolo, tematica e descrizione sono obbligatori.",
     pubErr: "Pubblicazione impossibile.", pubErr2: "Pubblicazione impossibile per ora.",
     needLogin: "Accedi per pubblicare la tua idea.", login: "Accedi",
@@ -52,6 +54,7 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
   const [location, setLocation] = useState("");
   const [cat, setCat] = useState("");
   const [desc, setDesc] = useState("");
+  const [image, setImage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [needLogin, setNeedLogin] = useState(false);
@@ -68,7 +71,7 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
       const r = await fetch("/app/api/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, cat, desc, location }),
+        body: JSON.stringify({ title, cat, desc, location, image }),
       });
       const d = await r.json();
       if (r.status === 401) {
@@ -87,6 +90,8 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
       setBusy(false);
     }
   }
+
+  const seed = keywordsFromText(title, desc) || title.trim();
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -122,10 +127,7 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
           </div>
           <div className="mfield">
             <label>{tr.fImages}</label>
-            <div className="upload-zone" title={tr.soon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-              <span>{tr.soon}</span>
-            </div>
+            <ImagePicker seed={seed} value={image} onPick={setImage} />
           </div>
 
           {needLogin ? (
