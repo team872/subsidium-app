@@ -30,6 +30,7 @@ const DICT: Record<string, Dict> = {
     labelled: "Labellisée", pending: "En attente", removeLabel: "Retirer le label", doLabel: "Labelliser", noOrg: "Aucune organisation.",
     certsIntro: "Demandes de certification Leader (Refondateur Certifié N3) issues du parcours. Approuver promeut le membre au niveau N3.",
     hDecision: "Décision", certify: "Certifier (N3)", refuse: "Refuser", noCert: "Aucune demande de certification en attente.",
+    illBtn: "✨ Illustrer automatiquement (Pexels)", illRun: "Illustration en cours…", illNone: "Ajoutez une clé API Pexels (PEXELS_API_KEY) côté serveur pour activer cette fonction.",
   },
   en: {
     title: "Administration", denied: "Access reserved for administrators.",
@@ -43,6 +44,7 @@ const DICT: Record<string, Dict> = {
     labelled: "Accredited", pending: "Pending", removeLabel: "Remove accreditation", doLabel: "Accredit", noOrg: "No organisation.",
     certsIntro: "Leader certification requests (Certified Refounder N3) from the journey. Approving promotes the member to level N3.",
     hDecision: "Decision", certify: "Certify (N3)", refuse: "Decline", noCert: "No pending certification request.",
+    illBtn: "✨ Auto-illustrate (Pexels)", illRun: "Illustrating…", illNone: "Add a Pexels API key (PEXELS_API_KEY) on the server to enable this feature.",
   },
   it: {
     title: "Amministrazione", denied: "Accesso riservato agli amministratori.",
@@ -56,6 +58,7 @@ const DICT: Record<string, Dict> = {
     labelled: "Accreditata", pending: "In attesa", removeLabel: "Rimuovi accreditamento", doLabel: "Accredita", noOrg: "Nessuna organizzazione.",
     certsIntro: "Richieste di certificazione Leader (Rifondatore Certificato N3) dal percorso. Approvare promuove il membro al livello N3.",
     hDecision: "Decisione", certify: "Certifica (N3)", refuse: "Rifiuta", noCert: "Nessuna richiesta di certificazione in attesa.",
+    illBtn: "✨ Illustra automaticamente (Pexels)", illRun: "Illustrazione in corso…", illNone: "Aggiungi una chiave API Pexels (PEXELS_API_KEY) sul server per attivare questa funzione.",
   },
 };
 
@@ -67,6 +70,27 @@ const th: React.CSSProperties = { padding: "10px 14px", fontSize: 13, fontWeight
 const td: React.CSSProperties = { padding: "12px 14px", verticalAlign: "top" };
 const tableStyle: React.CSSProperties = { width: "100%", borderCollapse: "collapse", background: "#fff", border: "1px solid #EBD9CD", borderRadius: 14 };
 const headRow: React.CSSProperties = { textAlign: "left", color: "#372646", background: "#EFE8F2" };
+
+function AutoIllustrate({ tr }: { tr: Dict }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  async function run() {
+    setBusy(true); setMsg("");
+    try {
+      const r = await fetch("/app/api/admin/illustrate", { method: "POST" });
+      const d = await r.json();
+      if (!d.configured) setMsg(tr.illNone);
+      else setMsg(`${d.events || 0} événements · ${d.ideas || 0} idées ✓`);
+    } catch { setMsg(tr.illNone); }
+    setBusy(false);
+  }
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+      <button className="btn btn-ghost" onClick={run} disabled={busy}>{busy ? tr.illRun : tr.illBtn}</button>
+      {msg && <span style={{ color: "#5E4A73", fontSize: 13 }}>{msg}</span>}
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const { lang } = useLang();
@@ -163,7 +187,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {tab === "actualites" ? <AdminActualites /> : tab === "audits" ? <AdminAudits /> : tab === "rgpd" ? <AdminRgpd /> : loading ? <p className="board-empty">{tr.loading}</p> : tab === "membres" ? (
+      {tab === "actualites" ? <><AutoIllustrate tr={tr} /><AdminActualites /></> : tab === "audits" ? <AdminAudits /> : tab === "rgpd" ? <AdminRgpd /> : loading ? <p className="board-empty">{tr.loading}</p> : tab === "membres" ? (
         <>
           <p style={{ color: "#5E4A73", maxWidth: 760, margin: "0 0 14px", lineHeight: 1.6 }}>{tr.membersIntro}</p>
           <div style={{ overflowX: "auto" }}>
