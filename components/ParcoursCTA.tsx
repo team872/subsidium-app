@@ -2,15 +2,21 @@
 
 import Link from "next/link";
 import { useNiveau } from "@/components/useNiveau";
+import { useLang, useT } from "@/components/LangProvider";
 import { prochaineEtape, NIVEAUX } from "@/lib/niveau";
 
+const JOURNEY: Record<string, string> = { fr: "Votre parcours", en: "Your journey", it: "Il tuo percorso" };
+
 // Bandeau contextuel de progression dans le parcours, selon le niveau effectif.
-// Visiteur -> Charte ; Visiteur (charte ok) -> Paiement ; Refondateur -> Auto-évaluation.
 export default function ParcoursCTA() {
+  const { lang } = useLang();
+  const t = useT();
   const { rang, charteValidee, paye, ready } = useNiveau();
   if (!ready) return null;
-  const etape = prochaineEtape(rang, charteValidee, paye);
+  const etape = prochaineEtape(rang, charteValidee, paye, lang);
   if (!etape) return null;
+  const roleKey = t(`role.${rang}`);
+  const roleName = roleKey === `role.${rang}` ? NIVEAUX[rang] : roleKey;
 
   return (
     <div
@@ -28,7 +34,7 @@ export default function ParcoursCTA() {
     >
       <div style={{ flex: 1, minWidth: 220 }}>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".04em", color: "#5E4A73", textTransform: "uppercase" }}>
-          Votre parcours · {NIVEAUX[rang]}
+          {JOURNEY[lang] || JOURNEY.fr} · {roleName}
         </div>
         <div style={{ color: "#372646", marginTop: 2 }}>{etape.hint}</div>
       </div>
