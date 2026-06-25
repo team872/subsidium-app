@@ -5,6 +5,7 @@ import AppShell from "@/components/AppShell";
 import { NIVEAUX } from "@/lib/niveau";
 import { useLang, useT } from "@/components/LangProvider";
 import AdminActualites from "@/components/AdminActualites";
+import AdminRgpd from "@/components/AdminRgpd";
 import "@/components/MemberBoards.css";
 
 type Member = {
@@ -18,7 +19,7 @@ type Dict = Record<string, string>;
 const DICT: Record<string, Dict> = {
   fr: {
     title: "Administration", denied: "Accès réservé aux administrateurs.",
-    tabMembers: "Membres", tabOrgs: "Organisations", tabCerts: "Certifications", tabActus: "Actualités",
+    tabMembers: "Membres", tabOrgs: "Organisations", tabCerts: "Certifications", tabActus: "Actualités", tabRgpd: "RGPD",
     searchMember: "Rechercher un membre…", searchOrg: "Rechercher une organisation…", loading: "Chargement…",
     membersIntro: "Promouvez un Initiateur en Refondateur Certifié (N3) ou Ambassadeur (N4). Les niveaux 0→2 s'obtiennent normalement par le parcours.",
     hMember: "Membre", hLevel: "Niveau actuel", hParcours: "État parcours", hPromote: "Promouvoir / valider",
@@ -31,7 +32,7 @@ const DICT: Record<string, Dict> = {
   },
   en: {
     title: "Administration", denied: "Access reserved for administrators.",
-    tabMembers: "Members", tabOrgs: "Organisations", tabCerts: "Certifications", tabActus: "News",
+    tabMembers: "Members", tabOrgs: "Organisations", tabCerts: "Certifications", tabActus: "News", tabRgpd: "GDPR",
     searchMember: "Search a member…", searchOrg: "Search an organisation…", loading: "Loading…",
     membersIntro: "Promote an Initiator to Certified Refounder (N3) or Ambassador (N4). Levels 0→2 are normally earned through the journey.",
     hMember: "Member", hLevel: "Current level", hParcours: "Journey status", hPromote: "Promote / validate",
@@ -44,7 +45,7 @@ const DICT: Record<string, Dict> = {
   },
   it: {
     title: "Amministrazione", denied: "Accesso riservato agli amministratori.",
-    tabMembers: "Membri", tabOrgs: "Organizzazioni", tabCerts: "Certificazioni", tabActus: "Notizie",
+    tabMembers: "Membri", tabOrgs: "Organizzazioni", tabCerts: "Certificazioni", tabActus: "Notizie", tabRgpd: "GDPR",
     searchMember: "Cerca un membro…", searchOrg: "Cerca un'organizzazione…", loading: "Caricamento…",
     membersIntro: "Promuovi un Iniziatore a Rifondatore Certificato (N3) o Ambasciatore (N4). I livelli 0→2 si ottengono normalmente tramite il percorso.",
     hMember: "Membro", hLevel: "Livello attuale", hParcours: "Stato percorso", hPromote: "Promuovi / convalida",
@@ -73,7 +74,7 @@ export default function AdminPage() {
   const roleName = (i: number) => { const k = t(`role.${i}`); return k === `role.${i}` ? NIVEAUX[i] : k; };
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"membres" | "organisations" | "certifications" | "actualites">("membres");
+  const [tab, setTab] = useState<"membres" | "organisations" | "certifications" | "actualites" | "rgpd">("membres");
   const [members, setMembers] = useState<Member[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [certs, setCerts] = useState<Cert[]>([]);
@@ -148,6 +149,7 @@ export default function AdminPage() {
         <button className={tab === "organisations" ? "on" : ""} onClick={() => setTab("organisations")}>{tr.tabOrgs}</button>
         <button className={tab === "certifications" ? "on" : ""} onClick={() => setTab("certifications")}>{tr.tabCerts}{certs.length > 0 ? ` (${certs.length})` : ""}</button>
         <button className={tab === "actualites" ? "on" : ""} onClick={() => setTab("actualites")}>{tr.tabActus}</button>
+        <button className={tab === "rgpd" ? "on" : ""} onClick={() => setTab("rgpd")}>{tr.tabRgpd}</button>
       </div>
 
       {(tab === "membres" || tab === "organisations") && (
@@ -159,7 +161,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {tab === "actualites" ? <AdminActualites /> : loading ? <p className="board-empty">{tr.loading}</p> : tab === "membres" ? (
+      {tab === "actualites" ? <AdminActualites /> : tab === "rgpd" ? <AdminRgpd /> : loading ? <p className="board-empty">{tr.loading}</p> : tab === "membres" ? (
         <>
           <p style={{ color: "#5E4A73", maxWidth: 760, margin: "0 0 14px", lineHeight: 1.6 }}>{tr.membersIntro}</p>
           <div style={{ overflowX: "auto" }}>
