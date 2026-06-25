@@ -3,18 +3,29 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import { useLang } from "@/components/LangProvider";
 import type { NotificationDTO } from "@/lib/data";
 import "@/components/MemberBoards.css";
 
-const fmt = (iso: string) => {
-  try {
-    return new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "";
-  }
+type Dict = Record<string, string>;
+const DICT: Record<string, Dict> = {
+  fr: { title: "Notifications", loading: "Chargement…", empty: "Aucune notification pour l'instant. Suivez des idées pour être tenu informé des échanges." },
+  en: { title: "Notifications", loading: "Loading…", empty: "No notification yet. Follow ideas to stay informed of discussions." },
+  it: { title: "Notifiche", loading: "Caricamento…", empty: "Nessuna notifica per ora. Segui le idee per restare informato sugli scambi." },
 };
 
 export default function NotificationsPage() {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
+  const locale = lang === "it" ? "it-IT" : lang === "en" ? "en-GB" : "fr-FR";
+  const fmt = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  };
+
   const [items, setItems] = useState<NotificationDTO[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,20 +35,19 @@ export default function NotificationsPage() {
       .then((d) => setItems(d.items || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-    // Marque comme lues à l'ouverture de la page.
     fetch("/app/api/notifications/read", { method: "POST" }).catch(() => {});
   }, []);
 
   return (
     <AppShell>
       <div className="board-head">
-        <h1>Notifications</h1>
+        <h1>{tr.title}</h1>
       </div>
 
       {loading ? (
-        <p className="board-empty">Chargement…</p>
+        <p className="board-empty">{tr.loading}</p>
       ) : items.length === 0 ? (
-        <p className="board-empty">Aucune notification pour l'instant. Suivez des idées pour être tenu informé des échanges.</p>
+        <p className="board-empty">{tr.empty}</p>
       ) : (
         <div className="notif-list">
           {items.map((n) => {
