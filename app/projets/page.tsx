@@ -5,34 +5,81 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import { useLang } from "@/components/LangProvider";
 import "@/components/MemberBoards.css";
 
 const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
   ssr: false,
-  loading: () => <div className="board-empty">Chargement de la carte…</div>,
+  loading: () => <div className="board-empty">…</div>,
 });
 
 type Projet = { id: number; title: string; theme: string | null; desc: string; lieu: string | null; prive: boolean; membres: number; grad: string };
+type Dict = Record<string, string>;
+
+const DICT: Record<string, Dict> = {
+  fr: {
+    title: "Projets", publish: "Publier un projet",
+    intro: "Les appels à projet transforment les idées en actions concrètes. Suivez les projets qui vous inspirent, candidatez pour y contribuer, ou portez le vôtre.",
+    tabTous: "Tous les projets", tabSuivis: "Projets suivis", tabEmis: "Projets émis",
+    search: "Rechercher un projet, un thème, une ville…", list: "Liste", map: "Carte",
+    loading: "Chargement des projets…",
+    emptyTous: "Aucun projet pour le moment.", emptySuivis: "Vous ne suivez aucun projet.", emptyEmis: "Vous n'avez émis aucun projet.",
+    projet: "Projet", prive: "privé", member: "membre", members: "membres",
+    reqTitle: "Le titre du projet est requis.", createErr: "Création impossible.", creating: "Création…",
+    fTitle: "Titre du projet", fTheme: "Thème", fLieu: "Lieu", fDesc: "Description",
+    phTheme: "Ex. Faire ensemble, Mobilité, Solidarité…", phLieu: "Ville, quartier…", phDesc: "Présentez l'objectif et le déroulé du projet…",
+    priveLabel: "Projet privé (visible uniquement par les membres)", close: "Fermer",
+  },
+  en: {
+    title: "Projects", publish: "Publish a project",
+    intro: "Calls for projects turn ideas into concrete action. Follow the projects that inspire you, apply to contribute, or lead your own.",
+    tabTous: "All projects", tabSuivis: "Followed projects", tabEmis: "My projects",
+    search: "Search a project, a theme, a city…", list: "List", map: "Map",
+    loading: "Loading projects…",
+    emptyTous: "No project yet.", emptySuivis: "You are not following any project.", emptyEmis: "You haven't created any project.",
+    projet: "Project", prive: "private", member: "member", members: "members",
+    reqTitle: "The project title is required.", createErr: "Could not create.", creating: "Creating…",
+    fTitle: "Project title", fTheme: "Theme", fLieu: "Location", fDesc: "Description",
+    phTheme: "E.g. Acting together, Mobility, Solidarity…", phLieu: "City, neighbourhood…", phDesc: "Describe the goal and the steps of the project…",
+    priveLabel: "Private project (visible to members only)", close: "Close",
+  },
+  it: {
+    title: "Progetti", publish: "Pubblica un progetto",
+    intro: "Gli appelli a progetto trasformano le idee in azioni concrete. Segui i progetti che ti ispirano, candidati per contribuire o guida il tuo.",
+    tabTous: "Tutti i progetti", tabSuivis: "Progetti seguiti", tabEmis: "I miei progetti",
+    search: "Cerca un progetto, un tema, una città…", list: "Elenco", map: "Mappa",
+    loading: "Caricamento dei progetti…",
+    emptyTous: "Nessun progetto per ora.", emptySuivis: "Non segui alcun progetto.", emptyEmis: "Non hai creato alcun progetto.",
+    projet: "Progetto", prive: "privato", member: "membro", members: "membri",
+    reqTitle: "Il titolo del progetto è obbligatorio.", createErr: "Creazione impossibile.", creating: "Creazione…",
+    fTitle: "Titolo del progetto", fTheme: "Tema", fLieu: "Luogo", fDesc: "Descrizione",
+    phTheme: "Es. Fare insieme, Mobilità, Solidarietà…", phLieu: "Città, quartiere…", phDesc: "Presenta l'obiettivo e lo svolgimento del progetto…",
+    priveLabel: "Progetto privato (visibile solo ai membri)", close: "Chiudi",
+  },
+};
 
 function initials(n: string) {
   return n.replace(/[^A-Za-zÀ-ſ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "P";
 }
-const TABS: [string, string][] = [["tous", "Tous les projets"], ["suivis", "Projets suivis"], ["emis", "Projets émis"]];
 
 function ProjetCard({ p }: { p: Projet }) {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   return (
     <Link href={`/projets/${p.id}`} className="icard">
       <div style={{ height: 96, background: p.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(p.title)}</div>
       <div className="bd">
-        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{p.theme || "Projet"}{p.prive ? " · privé" : ""}</span>
+        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{p.theme || tr.projet}{p.prive ? " · " + tr.prive : ""}</span>
         <h3 style={{ marginTop: 4 }}>{p.title}</h3>
-        {p.lieu && <p style={{ color: "#9C919E", fontSize: 13 }}>{p.lieu} · {p.membres} membre{p.membres > 1 ? "s" : ""}</p>}
+        {p.lieu && <p style={{ color: "#9C919E", fontSize: 13 }}>{p.lieu} · {p.membres} {p.membres > 1 ? tr.members : tr.member}</p>}
       </div>
     </Link>
   );
 }
 
 export default function ProjetsPage() {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   const router = useRouter();
   const [tab, setTab] = useState("tous");
   const [projets, setProjets] = useState<Projet[]>([]);
@@ -45,6 +92,8 @@ export default function ProjetsPage() {
   const [form, setForm] = useState({ title: "", theme: "", lieu: "", desc: "", prive: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const TABS: [string, string][] = [["tous", tr.tabTous], ["suivis", tr.tabSuivis], ["emis", tr.tabEmis]];
 
   function load(t: string) {
     setLoading(true);
@@ -69,26 +118,23 @@ export default function ProjetsPage() {
 
   async function create() {
     if (busy) return;
-    if (!form.title.trim()) { setError("Le titre du projet est requis."); return; }
+    if (!form.title.trim()) { setError(tr.reqTitle); return; }
     setBusy(true); setError("");
     try {
       const r = await fetch("/app/api/projets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const d = await r.json();
-      if (!r.ok) { setError(d.error || "Création impossible."); setBusy(false); return; }
+      if (!r.ok) { setError(d.error || tr.createErr); setBusy(false); return; }
       router.push(`/projets/${d.id}`);
-    } catch { setError("Création impossible."); setBusy(false); }
+    } catch { setError(tr.createErr); setBusy(false); }
   }
 
   return (
     <AppShell>
       <div className="board-head">
-        <h1>Projets</h1>
-        {canCreate && <button className="btn btn-coral" onClick={() => setOpen(true)}>Publier un projet</button>}
+        <h1>{tr.title}</h1>
+        {canCreate && <button className="btn btn-coral" onClick={() => setOpen(true)}>{tr.publish}</button>}
       </div>
-      <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 14px", lineHeight: 1.6 }}>
-        Les appels à projet transforment les idées en actions concrètes. Suivez les projets qui vous inspirent,
-        candidatez pour y contribuer, ou portez le vôtre.
-      </p>
+      <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 14px", lineHeight: 1.6 }}>{tr.intro}</p>
 
       <div className="board-tabs">
         {TABS.map(([k, label]) => (
@@ -99,16 +145,16 @@ export default function ProjetsPage() {
       <div className="board-tools">
         <div className="board-search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un projet, un thème, une ville…" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr.search} />
         </div>
         <div style={{ display: "inline-flex", border: "1px solid #E3D7CC", borderRadius: 10, overflow: "hidden", marginLeft: "auto" }}>
-          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>Liste</button>
-          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>Carte</button>
+          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>{tr.list}</button>
+          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>{tr.map}</button>
         </div>
       </div>
 
-      {loading ? <p className="board-empty">Chargement des projets…</p>
-      : list.length === 0 ? <p className="board-empty">{tab === "tous" ? "Aucun projet pour le moment." : tab === "suivis" ? "Vous ne suivez aucun projet." : "Vous n'avez émis aucun projet."}</p>
+      {loading ? <p className="board-empty">{tr.loading}</p>
+      : list.length === 0 ? <p className="board-empty">{tab === "tous" ? tr.emptyTous : tab === "suivis" ? tr.emptySuivis : tr.emptyEmis}</p>
       : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
@@ -127,19 +173,19 @@ export default function ProjetsPage() {
       {open && (
         <div className="modal-overlay" onClick={() => setOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head"><h2>Publier un projet</h2><button className="modal-x" onClick={() => setOpen(false)} aria-label="Fermer">×</button></div>
+            <div className="modal-head"><h2>{tr.publish}</h2><button className="modal-x" onClick={() => setOpen(false)} aria-label={tr.close}>×</button></div>
             <div className="modal-body">
-              <div className="mfield"><label>Titre du projet</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-              <div className="mfield"><label>Thème</label><input value={form.theme} onChange={(e) => setForm({ ...form, theme: e.target.value })} placeholder="Ex. Faire ensemble, Mobilité, Solidarité…" /></div>
-              <div className="mfield"><label>Lieu</label><input value={form.lieu} onChange={(e) => setForm({ ...form, lieu: e.target.value })} placeholder="Ville, quartier…" /></div>
-              <div className="mfield"><label>Description</label><textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Présentez l'objectif et le déroulé du projet…" /></div>
+              <div className="mfield"><label>{tr.fTitle}</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+              <div className="mfield"><label>{tr.fTheme}</label><input value={form.theme} onChange={(e) => setForm({ ...form, theme: e.target.value })} placeholder={tr.phTheme} /></div>
+              <div className="mfield"><label>{tr.fLieu}</label><input value={form.lieu} onChange={(e) => setForm({ ...form, lieu: e.target.value })} placeholder={tr.phLieu} /></div>
+              <div className="mfield"><label>{tr.fDesc}</label><textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder={tr.phDesc} /></div>
               <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#5E4A73", fontSize: 14, cursor: "pointer" }}>
                 <input type="checkbox" checked={form.prive} onChange={(e) => setForm({ ...form, prive: e.target.checked })} />
-                Projet privé (visible uniquement par les membres)
+                {tr.priveLabel}
               </label>
               {error && <p className="msg">{error}</p>}
             </div>
-            <div className="modal-foot"><button className="btn btn-coral" onClick={create} disabled={busy}>{busy ? "Création…" : "Publier"}</button></div>
+            <div className="modal-foot"><button className="btn btn-coral" onClick={create} disabled={busy}>{busy ? tr.creating : tr.publish}</button></div>
           </div>
         </div>
       )}
