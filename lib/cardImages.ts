@@ -2,7 +2,8 @@ import { query, ensureDb } from "./db";
 
 // Visuels des cartes : colonne `image` (URL) sur events/ideas + recherche d'images
 // libres de droit (Pexels) activée dès que PEXELS_API_KEY est défini côté serveur.
-// Tant que la clé est absente, l'app retombe proprement sur le dégradé de marque.
+// Génération d'illustration IA (FLUX via Together AI) activée dès que TOGETHER_API_KEY est défini.
+// Tant que les clés sont absentes, l'app retombe proprement sur le dégradé de marque.
 
 let ready: Promise<void> | null = null;
 export function ensureImageCols(): Promise<void> {
@@ -43,6 +44,39 @@ export async function pexelsSearch(q: string, n = 8): Promise<StockPhoto[]> {
 
 export function pexelsConfigured(): boolean {
   return !!process.env.PEXELS_API_KEY;
+}
+
+// --- Génération d'illustration IA : FLUX.1 [schnell] via Together AI ---
+export function togetherConfigured(): boolean {
+  return !!process.env.TOGETHER_API_KEY;
+}
+export async function togetherGenerate(prompt: string): Promise<string | null> {
+  const key = process.env.TOGETHER_API_KEY;
+  if (!key || !prompt.trim()) return null;
+  try {
+    const r = await fetch("https://api.together.xyz/v1/images/generations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: "black-forest-labs/FLUX.1-schnell-Free",
+        prompt: `${prompt}, photorealistic editorial photograph, civic community, natural light`,
+        width: 1024,
+        height: 576,
+        steps: 4,
+        n: 1,
+      }),
+      cache: "no-store",
+    });
+    if (!r.ok) return null;
+    const d: any = await r.json();
+    const item = d?.data?.[0];
+    if (!item) return null;
+    if (item.url) return item.url;
+    if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export async function setEventImage(id: number, url: string | null): Promise<void> {
