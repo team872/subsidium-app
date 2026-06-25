@@ -29,7 +29,13 @@ type TabKey = (typeof TABS)[number]["key"];
 function IdeaCard({ it }: { it: IdeaDTO }) {
   return (
     <Link href={`/idees/${it.id}`} className="icard">
-      <div className="band" style={{ background: it.color }}><span>{it.cat}</span></div>
+      {it.image ? (
+        <div style={{ height: 120, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.45)), url("${it.image}")`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
+          <span style={{ position: "absolute", left: 12, top: 12, background: it.color, color: "#fff", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", padding: "3px 10px", borderRadius: 999 }}>{it.cat}</span>
+        </div>
+      ) : (
+        <div className="band" style={{ background: it.color }}><span>{it.cat}</span></div>
+      )}
       <div className="bd">
         <h3>{it.title}</h3>
         <p>{it.desc}</p>

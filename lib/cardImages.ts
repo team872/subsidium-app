@@ -54,6 +54,48 @@ export async function setIdeaImage(id: number, url: string | null): Promise<void
   await query(`UPDATE ideas SET image=$2 WHERE id=$1`, [id, url]);
 }
 
+// Requête Pexels par type d'événement (en anglais : meilleurs résultats civiques).
+const TAG_QUERY: Record<string, string> = {
+  "Nouveauté": "city community announcement",
+  "Concertation": "town hall meeting citizens",
+  "Forum": "community fair people",
+  "Atelier": "community workshop participatory",
+  "Rencontre": "community gathering café",
+  "Récit": "volunteers community project",
+};
+
+// Illustration automatique : remplit le champ image (events/idees) vides via Pexels.
+// Choix déterministe (id % n) pour varier les photos d'une carte à l'autre.
+export async function autoIllustrateEvents(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureImageCols();
+  const rows = await query<{ id: number; tag: string; title: string }>(`SELECT id, tag, title FROM events WHERE image IS NULL ORDER BY id`);
+  let n = 0;
+  for (const r of rows) {
+    const q = TAG_QUERY[r.tag] || "community local event";
+    const photos = await pexelsSearch(q, 6);
+    if (photos.length) {
+      await setEventImage(r.id, photos[r.id % photos.length].full);
+      n++;
+    }
+  }
+  return n;
+}
+export async function autoIllustrateIdeas(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureImageCols();
+  const rows = await query<{ id: number; cat: string; title: string }>(`SELECT id, cat, title FROM ideas WHERE image IS NULL ORDER BY id`);
+  let n = 0;
+  for (const r of rows) {
+    const photos = await pexelsSearch(`${r.cat} community local`, 6);
+    if (photos.length) {
+      await setIdeaImage(r.id, photos[r.id % photos.length].full);
+      n++;
+    }
+  }
+  return n;
+}
+
 // --- Événements de démo réalistes (idempotent par titre) ---
 const G = [
   "linear-gradient(135deg,#E8A98F,#C85A48)",
