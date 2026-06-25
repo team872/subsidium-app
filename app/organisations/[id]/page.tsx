@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import OrgAuditPanel from "@/components/OrgAuditPanel";
 import "@/components/MemberBoards.css";
 
 type Org = {
@@ -99,6 +100,8 @@ export default function OrgDetailPage() {
           )}
         </div>
       </section>
+
+      {isMember && !org.labellisee && <OrgAuditPanel orgId={id} />}
 
       <section style={{ maxWidth: 820, marginTop: 24 }}>
         <h2 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "0 0 12px" }}>Propositions & réussites</h2>
