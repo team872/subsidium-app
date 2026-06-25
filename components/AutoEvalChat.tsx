@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import EvalResult from "@/components/EvalResult";
+import { useLang } from "@/components/LangProvider";
 import "./AutoEvalChat.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -15,15 +16,34 @@ export type EvalSummary = {
 };
 
 const API = "/app/api/eval";
-
-// L'agent applique son protocole : 20 dimensions, une question à la fois (son prompt
-// système l'impose et il refuse de raccourcir côté client, par intégrité de l'évaluation).
-// La barre de progression est donc calibrée sur 20. Pour un entretien d'inscription plus
-// court, il faut ajouter un « mode inscription » (grille réduite + scoring) côté agent.
 const TARGET_QUESTIONS = 20;
 const OPENER = "Bonjour, je suis prêt(e) à commencer l'entretien.";
 
-// L'agent place sa question après un marqueur « QUESTION : » — on l'isole pour la mettre en valeur.
+type Dict = Record<string, string>;
+const DICT: Record<string, Dict> = {
+  fr: {
+    noReply: "(pas de réponse)", connErr: "Connexion à l'évaluateur impossible. Réessayez.", scoreErr: "Évaluation impossible pour le moment.",
+    intro: "Cette étape n'est pas un test idéologique. Un agent SUBSIDIUM vous accompagne dans un entretien qui passe en revue les grandes dimensions de votre engagement. Répondez avec vos propres mots et, si vous le pouvez, illustrez d'un exemple concret vécu — c'est ce qui permet d'établir votre palier. Vous pourrez conclure à tout moment.",
+    start: "Démarrer l'entretien", dimension: "Dimension", on: "sur", evaluator: "Évaluateur SUBSIDIUM",
+    replyPh: "Votre réponse…", send: "Envoyer",
+    doneHint: "Vous avez parcouru les grands domaines : vous pouvez conclure et obtenir votre palier.", finish: "Terminer l'entretien et obtenir mon palier",
+  },
+  en: {
+    noReply: "(no reply)", connErr: "Could not connect to the evaluator. Please try again.", scoreErr: "Assessment failed for now.",
+    intro: "This step is not an ideological test. A SUBSIDIUM agent guides you through an interview reviewing the main dimensions of your commitment. Answer in your own words and, if you can, illustrate with a concrete lived example — this is what establishes your level. You can conclude at any time.",
+    start: "Start the interview", dimension: "Dimension", on: "of", evaluator: "SUBSIDIUM Evaluator",
+    replyPh: "Your reply…", send: "Send",
+    doneHint: "You have covered the main areas: you can conclude and get your level.", finish: "End the interview and get my level",
+  },
+  it: {
+    noReply: "(nessuna risposta)", connErr: "Connessione al valutatore impossibile. Riprova.", scoreErr: "Valutazione impossibile per ora.",
+    intro: "Questa tappa non è un test ideologico. Un agente SUBSIDIUM ti accompagna in un colloquio che passa in rassegna le principali dimensioni del tuo impegno. Rispondi con parole tue e, se puoi, illustra con un esempio concreto vissuto — è ciò che permette di stabilire il tuo livello. Puoi concludere in qualsiasi momento.",
+    start: "Avviare il colloquio", dimension: "Dimensione", on: "su", evaluator: "Valutatore SUBSIDIUM",
+    replyPh: "La tua risposta…", send: "Invia",
+    doneHint: "Hai esaminato i principali ambiti: puoi concludere e ottenere il tuo livello.", finish: "Concludere il colloquio e ottenere il mio livello",
+  },
+};
+
 function splitQuestion(text: string) {
   const re = /QUESTION\s*:/gi;
   let last = -1;
@@ -37,6 +57,8 @@ function splitQuestion(text: string) {
 }
 
 export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary | null) => void }) {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   const [history, setHistory] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,10 +82,10 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
         body: JSON.stringify({ messages: next }),
       });
       const d = await r.json();
-      const reply: string = d.reply || d.error || "(pas de réponse)";
+      const reply: string = d.reply || d.error || tr.noReply;
       setHistory([...next, { role: "assistant", content: reply }]);
     } catch {
-      setError("Connexion à l'évaluateur impossible. Réessayez.");
+      setError(tr.connErr);
     }
     setBusy(false);
   }
@@ -115,30 +137,22 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
       setResult(s);
       onResult(s);
     } catch {
-      setError("Évaluation impossible pour le moment.");
+      setError(tr.scoreErr);
     }
     setBusy(false);
   }
 
-  /* ----- résultat ----- */
   if (result) return <EvalResult summary={result} />;
 
-  /* ----- introduction ----- */
   if (!started) {
     return (
       <div className="eval-intro">
-        <p>
-          Cette étape n'est pas un test idéologique. Un agent SUBSIDIUM vous accompagne dans un
-          entretien qui passe en revue les grandes dimensions de votre engagement. Répondez avec vos
-          propres mots et, si vous le pouvez, illustrez d'un exemple concret vécu — c'est ce qui permet
-          d'établir votre palier. Vous pourrez conclure à tout moment.
-        </p>
-        <button type="button" className="btn btn-coral" onClick={start}>Démarrer l'entretien</button>
+        <p>{tr.intro}</p>
+        <button type="button" className="btn btn-coral" onClick={start}>{tr.start}</button>
       </div>
     );
   }
 
-  /* ----- conversation ----- */
   const asked = history.filter((m) => m.role === "assistant").length;
   const current = Math.min(asked, TARGET_QUESTIONS);
   const pct = Math.min(asked / TARGET_QUESTIONS, 1) * 100;
@@ -146,14 +160,14 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
     <div className="eval-chat">
       <div className="eval-progress">
         <div className="eval-progress-head">
-          <span>Dimension {current} sur {TARGET_QUESTIONS}</span>
+          <span>{tr.dimension} {current} {tr.on} {TARGET_QUESTIONS}</span>
           <span>{Math.round(pct)} %</span>
         </div>
         <div className="eval-bar"><div className="eval-bar-fill" style={{ width: `${pct}%` }} /></div>
       </div>
       <div className="chat-window" ref={scrollRef}>
         {history.map((m, i) => {
-          if (i === 0 && m.role === "user") return null; // on masque l'amorce
+          if (i === 0 && m.role === "user") return null;
           if (m.role === "user") {
             return (
               <div className="bub-row me" key={i}>
@@ -164,7 +178,7 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
           const { intro, question } = splitQuestion(m.content);
           return (
             <div className="bub-row bot" key={i}>
-              <span className="bub-label">Évaluateur SUBSIDIUM</span>
+              <span className="bub-label">{tr.evaluator}</span>
               {intro && <div className="bub bot">{intro}</div>}
               {question && <div className="bub-q">{question}</div>}
               {!intro && !question && <div className="bub bot">{m.content}</div>}
@@ -173,7 +187,7 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
         })}
         {busy && (
           <div className="bub-row bot">
-            <span className="bub-label">Évaluateur SUBSIDIUM</span>
+            <span className="bub-label">{tr.evaluator}</span>
             <div className="bub bot typing"><span></span><span></span><span></span></div>
           </div>
         )}
@@ -186,18 +200,18 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-          placeholder="Votre réponse…"
+          placeholder={tr.replyPh}
           disabled={busy}
         />
         <button type="button" className="btn btn-coral" onClick={send} disabled={busy || !input.trim()}>
-          Envoyer
+          {tr.send}
         </button>
       </div>
       {asked >= TARGET_QUESTIONS && (
-        <p className="eval-hint">Vous avez parcouru les grands domaines : vous pouvez conclure et obtenir votre palier.</p>
+        <p className="eval-hint">{tr.doneHint}</p>
       )}
       <button type="button" className="btn btn-ghost eval-finish" onClick={finish} disabled={busy || history.length < 2}>
-        Terminer l'entretien et obtenir mon palier
+        {tr.finish}
       </button>
     </div>
   );

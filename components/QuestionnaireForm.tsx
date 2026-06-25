@@ -4,14 +4,19 @@ import { useMemo, useState } from "react";
 import { DIMENSIONS, SCALE } from "@/lib/autoEval";
 import type { EvalSummary } from "@/components/AutoEvalChat";
 import EvalResult from "@/components/EvalResult";
+import { useLang } from "@/components/LangProvider";
 import "./AutoEvalChat.css";
 
-// Questionnaire guidé (version « formulaire » de l'AVP) : un écran par dimension,
-// chaque énoncé noté sur l'échelle Jamais / Parfois / Souvent / Toujours (0..3).
-// Le scoring est calculé côté serveur (/api/eval/form-score), avec les MÊMES seuils
-// que l'agent conversationnel — palier/badge unifiés entre les deux chemins.
+type Dict = Record<string, string>;
+const DICT: Record<string, Dict> = {
+  fr: { dimension: "Dimension", on: "sur", scoreErr: "Calcul du résultat impossible pour le moment.", prev: "Précédent", next: "Suivant", calculating: "Calcul…", seeResult: "Voir mon résultat" },
+  en: { dimension: "Dimension", on: "of", scoreErr: "Could not compute the result for now.", prev: "Previous", next: "Next", calculating: "Calculating…", seeResult: "See my result" },
+  it: { dimension: "Dimensione", on: "su", scoreErr: "Calcolo del risultato impossibile per ora.", prev: "Precedente", next: "Successivo", calculating: "Calcolo…", seeResult: "Vedi il mio risultato" },
+};
 
 export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSummary) => void }) {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   const total = DIMENSIONS.length;
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -58,7 +63,7 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
       setResult(s);
       onResult?.(s);
     } catch {
-      setError("Calcul du résultat impossible pour le moment.");
+      setError(tr.scoreErr);
     }
     setBusy(false);
   }
@@ -71,7 +76,7 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
     <div className="eval-chat">
       <div className="eval-progress">
         <div className="eval-progress-head">
-          <span>Dimension {idx + 1} sur {total} · {dim.title}</span>
+          <span>{tr.dimension} {idx + 1} {tr.on} {total} · {dim.title}</span>
           <span>{Math.round(pct)} %</span>
         </div>
         <div className="eval-bar"><div className="eval-bar-fill" style={{ width: `${pct}%` }} /></div>
@@ -125,15 +130,15 @@ export default function QuestionnaireForm({ onResult }: { onResult?: (s: EvalSum
           onClick={() => setIdx((i) => Math.max(0, i - 1))}
           disabled={idx === 0 || busy}
         >
-          Précédent
+          {tr.prev}
         </button>
         {idx < total - 1 ? (
           <button type="button" className="btn btn-coral" onClick={() => setIdx((i) => i + 1)} disabled={!dimComplete}>
-            Suivant
+            {tr.next}
           </button>
         ) : (
           <button type="button" className="btn btn-coral" onClick={finish} disabled={!dimComplete || busy}>
-            {busy ? "Calcul…" : "Voir mon résultat"}
+            {busy ? tr.calculating : tr.seeResult}
           </button>
         )}
       </div>
