@@ -5,26 +5,71 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import { useLang } from "@/components/LangProvider";
 import "@/components/MemberBoards.css";
 
 const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
   ssr: false,
-  loading: () => <div className="board-empty">Chargement de la carte…</div>,
+  loading: () => <div className="board-empty">…</div>,
 });
 
 type Org = { id: number; name: string; type: string; region: string | null; desc: string; adresse: string | null; grad: string; labellisee?: boolean };
+type Dict = Record<string, string>;
+
+const DICT: Record<string, Dict> = {
+  fr: {
+    title: "Organisations labellisées", create: "Créer une organisation", mine: "Mes organisations",
+    pending: "En attente de labellisation", labelled: "Labellisée",
+    search: "Saisissez une ville, un code postal, un département, etc.", allTypes: "Tous les types",
+    list: "Liste", map: "Carte",
+    loading: "Chargement des organisations…", empty: "Aucune organisation ne correspond à votre recherche.",
+    reqName: "Le nom de l'organisation est requis.", createErr: "Création impossible.", creating: "Création…", createBtn: "Créer",
+    fName: "Nom de l'organisation", fType: "Type", fRegion: "Région / département", fDesc: "Description", fAdresse: "Adresse", fTel: "Téléphone", fMail: "Adresse mail", fSite: "Site internet",
+    phDesc: "Présentez la mission de votre organisation…",
+    note: "Votre organisation sera soumise à labellisation par Subsidium avant d'apparaître dans l'annuaire.", close: "Fermer",
+    tAssoc: "Association", tPublic: "Établissement public", tColl: "Collectivité territoriale", tEnt: "Entreprise", tAutre: "Autre",
+  },
+  en: {
+    title: "Accredited organisations", create: "Create an organisation", mine: "My organisations",
+    pending: "Pending accreditation", labelled: "Accredited",
+    search: "Enter a city, postcode, department, etc.", allTypes: "All types",
+    list: "List", map: "Map",
+    loading: "Loading organisations…", empty: "No organisation matches your search.",
+    reqName: "The organisation name is required.", createErr: "Could not create.", creating: "Creating…", createBtn: "Create",
+    fName: "Organisation name", fType: "Type", fRegion: "Region / department", fDesc: "Description", fAdresse: "Address", fTel: "Phone", fMail: "Email address", fSite: "Website",
+    phDesc: "Describe your organisation's mission…",
+    note: "Your organisation will be submitted for accreditation by Subsidium before appearing in the directory.", close: "Close",
+    tAssoc: "Nonprofit", tPublic: "Public institution", tColl: "Local authority", tEnt: "Company", tAutre: "Other",
+  },
+  it: {
+    title: "Organizzazioni accreditate", create: "Crea un'organizzazione", mine: "Le mie organizzazioni",
+    pending: "In attesa di accreditamento", labelled: "Accreditata",
+    search: "Inserisci una città, un CAP, un dipartimento, ecc.", allTypes: "Tutti i tipi",
+    list: "Elenco", map: "Mappa",
+    loading: "Caricamento delle organizzazioni…", empty: "Nessuna organizzazione corrisponde alla ricerca.",
+    reqName: "Il nome dell'organizzazione è obbligatorio.", createErr: "Creazione impossibile.", creating: "Creazione…", createBtn: "Crea",
+    fName: "Nome dell'organizzazione", fType: "Tipo", fRegion: "Regione / dipartimento", fDesc: "Descrizione", fAdresse: "Indirizzo", fTel: "Telefono", fMail: "Indirizzo e-mail", fSite: "Sito web",
+    phDesc: "Presenta la missione della tua organizzazione…",
+    note: "La tua organizzazione sarà sottoposta ad accreditamento da Subsidium prima di apparire nell'elenco.", close: "Chiudi",
+    tAssoc: "Associazione", tPublic: "Ente pubblico", tColl: "Ente locale", tEnt: "Azienda", tAutre: "Altro",
+  },
+};
 
 const TYPES = ["Association", "Établissement public", "Collectivité territoriale", "Entreprise", "Autre"];
+const TYPE_KEY: Record<string, string> = { "Association": "tAssoc", "Établissement public": "tPublic", "Collectivité territoriale": "tColl", "Entreprise": "tEnt", "Autre": "tAutre" };
+function typeLabel(t: string, tr: Dict) { return tr[TYPE_KEY[t]] || t; }
 
 function initials(n: string) {
   return n.replace(/[^A-Za-zÀ-ſ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "O";
 }
 function OrgCard({ o }: { o: Org }) {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   return (
     <Link href={`/organisations/${o.id}`} className="icard">
       <div style={{ height: 96, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>
       <div className="bd">
-        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{o.type}</span>
+        <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{typeLabel(o.type, tr)}</span>
         <h3 style={{ marginTop: 4 }}>{o.name}</h3>
         {o.adresse && <p style={{ color: "#9C919E", fontSize: 13 }}>{o.adresse}</p>}
       </div>
@@ -33,6 +78,8 @@ function OrgCard({ o }: { o: Org }) {
 }
 
 export default function OrganisationsPage() {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   const router = useRouter();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [mine, setMine] = useState<Org[]>([]);
@@ -65,36 +112,36 @@ export default function OrganisationsPage() {
 
   async function create() {
     if (busy) return;
-    if (!form.name.trim()) { setError("Le nom de l'organisation est requis."); return; }
+    if (!form.name.trim()) { setError(tr.reqName); return; }
     setBusy(true); setError("");
     try {
       const r = await fetch("/app/api/organisations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const d = await r.json();
-      if (!r.ok) { setError(d.error || "Création impossible."); setBusy(false); return; }
+      if (!r.ok) { setError(d.error || tr.createErr); setBusy(false); return; }
       router.push(`/organisations/${d.id}`);
-    } catch { setError("Création impossible."); setBusy(false); }
+    } catch { setError(tr.createErr); setBusy(false); }
   }
 
   return (
     <AppShell>
       <div className="board-head">
-        <h1>Organisations labellisées</h1>
-        <button className="btn btn-coral" onClick={() => setOpen(true)}>Créer une organisation</button>
+        <h1>{tr.title}</h1>
+        <button className="btn btn-coral" onClick={() => setOpen(true)}>{tr.create}</button>
       </div>
 
       {view === "liste" && mine.length > 0 && (
         <div style={{ marginBottom: 22 }}>
-          <h2 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "0 0 10px" }}>Mes organisations</h2>
+          <h2 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "0 0 10px" }}>{tr.mine}</h2>
           <div className="idees-grid">
             {mine.map((o) => (
               <Link key={o.id} href={`/organisations/${o.id}`} className="icard">
                 <div style={{ height: 96, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>
                 <div className="bd">
-                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{o.type}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{typeLabel(o.type, tr)}</span>
                   <h3 style={{ marginTop: 4 }}>{o.name}</h3>
                   {o.labellisee === false
-                    ? <span style={{ fontSize: 12, fontWeight: 700, color: "#8A5A00", background: "#FCE3B4", borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>En attente de labellisation</span>
-                    : <span style={{ fontSize: 12, fontWeight: 700, color: "#1E6B1E", background: "#DBF0D9", borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>Labellisée</span>}
+                    ? <span style={{ fontSize: 12, fontWeight: 700, color: "#8A5A00", background: "#FCE3B4", borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>{tr.pending}</span>
+                    : <span style={{ fontSize: 12, fontWeight: 700, color: "#1E6B1E", background: "#DBF0D9", borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>{tr.labelled}</span>}
                 </div>
               </Link>
             ))}
@@ -105,20 +152,20 @@ export default function OrganisationsPage() {
       <div className="board-tools">
         <div className="board-search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Saisissez une ville, un code postal, un département, etc." />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr.search} />
         </div>
         <select className="board-select" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="">Tous les types</option>
-          {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          <option value="">{tr.allTypes}</option>
+          {TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, tr)}</option>)}
         </select>
         <div style={{ display: "inline-flex", border: "1px solid #E3D7CC", borderRadius: 10, overflow: "hidden", marginLeft: "auto" }}>
-          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>Liste</button>
-          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>Carte</button>
+          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>{tr.list}</button>
+          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>{tr.map}</button>
         </div>
       </div>
 
-      {loading ? <p className="board-empty">Chargement des organisations…</p>
-      : list.length === 0 ? <p className="board-empty">Aucune organisation ne correspond à votre recherche.</p>
+      {loading ? <p className="board-empty">{tr.loading}</p>
+      : list.length === 0 ? <p className="board-empty">{tr.empty}</p>
       : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
@@ -137,20 +184,20 @@ export default function OrganisationsPage() {
       {open && (
         <div className="modal-overlay" onClick={() => setOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head"><h2>Créer une organisation</h2><button className="modal-x" onClick={() => setOpen(false)} aria-label="Fermer">×</button></div>
+            <div className="modal-head"><h2>{tr.create}</h2><button className="modal-x" onClick={() => setOpen(false)} aria-label={tr.close}>×</button></div>
             <div className="modal-body">
-              <div className="mfield"><label>Nom de l'organisation</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-              <div className="mfield"><label>Type</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>{TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
-              <div className="mfield"><label>Région / département</label><input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} /></div>
-              <div className="mfield"><label>Description</label><textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Présentez la mission de votre organisation…" /></div>
-              <div className="mfield"><label>Adresse</label><input value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} /></div>
-              <div className="mfield"><label>Téléphone</label><input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
-              <div className="mfield"><label>Adresse mail</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div className="mfield"><label>Site internet</label><input value={form.site} onChange={(e) => setForm({ ...form, site: e.target.value })} /></div>
+              <div className="mfield"><label>{tr.fName}</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+              <div className="mfield"><label>{tr.fType}</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>{TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, tr)}</option>)}</select></div>
+              <div className="mfield"><label>{tr.fRegion}</label><input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} /></div>
+              <div className="mfield"><label>{tr.fDesc}</label><textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder={tr.phDesc} /></div>
+              <div className="mfield"><label>{tr.fAdresse}</label><input value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} /></div>
+              <div className="mfield"><label>{tr.fTel}</label><input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
+              <div className="mfield"><label>{tr.fMail}</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+              <div className="mfield"><label>{tr.fSite}</label><input value={form.site} onChange={(e) => setForm({ ...form, site: e.target.value })} /></div>
               {error && <p className="msg">{error}</p>}
-              <p style={{ color: "#9C919E", fontSize: 12.5 }}>Votre organisation sera soumise à labellisation par Subsidium avant d'apparaître dans l'annuaire.</p>
+              <p style={{ color: "#9C919E", fontSize: 12.5 }}>{tr.note}</p>
             </div>
-            <div className="modal-foot"><button className="btn btn-coral" onClick={create} disabled={busy}>{busy ? "Création…" : "Créer"}</button></div>
+            <div className="modal-foot"><button className="btn btn-coral" onClick={create} disabled={busy}>{busy ? tr.creating : tr.createBtn}</button></div>
           </div>
         </div>
       )}
