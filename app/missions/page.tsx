@@ -110,7 +110,7 @@ export default function MissionsPage() {
   const candidatees = useMemo(() => mine.filter((m) => !statut || m.statut === statut), [mine, statut]);
 
   if (ready && !peutPorterInitiative(rang)) {
-    const etape = prochaineEtape(rang);
+    const etape = prochaineEtape(rang, undefined, undefined, lang);
     return (
       <AppShell>
         <div className="board-head"><h1>{tr.title}</h1></div>
