@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useLang } from "@/components/LangProvider";
 import "./AutoEvalChat.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -9,8 +10,40 @@ type Msg = { role: "user" | "assistant"; content: string };
 const API = "/app/api/eval";
 const OPENER = "Bonjour, je souhaite adhérer à la charte d'engagement Subsidium.";
 
-// L'agent place sa question après un marqueur « QUESTION : » — on l'isole pour la mettre en valeur
-// et ne pas afficher le marqueur interne (même convention que l'entretien d'auto-évaluation).
+type Dict = Record<string, string>;
+const DICT: Record<string, Dict> = {
+  fr: {
+    noReply: "(pas de réponse)", connErr: "Connexion à l'agent impossible. Réessayez.", validErr: "Validation impossible pour le moment.",
+    vValid: "Adhésion validée", vDeepen: "À approfondir",
+    noteValid: "Votre adhésion à la charte est validée. Après le paiement, vous accédez au niveau Refondateur et pouvez exprimer vos idées.",
+    noteInvalid: "L'agent souhaite approfondir votre adhésion avant de la valider.",
+    points: "Points soulevés :", retestPre: "Nouvel essai possible à partir du", finalize: "Finaliser mon adhésion (paiement)",
+    intro: "La charte d'engagement Subsidium n'est pas une formalité : un agent vous accompagne dans un court entretien pour vérifier que vous comprenez et adhérez aux quatre engagements de la charte (Vérité, Respect, Responsabilité, Espérance). Répondez avec vos propres mots. Vous devenez Refondateur une fois l'adhésion validée et le paiement effectué.",
+    startBtn: "Commencer l'entretien d'adhésion", agentLabel: "Agent Charte SUBSIDIUM",
+    replyPh: "Votre réponse…", send: "Envoyer", conclude: "Conclure et valider mon adhésion",
+  },
+  en: {
+    noReply: "(no reply)", connErr: "Could not connect to the agent. Please try again.", validErr: "Validation failed for now.",
+    vValid: "Membership validated", vDeepen: "To deepen",
+    noteValid: "Your adherence to the charter is validated. After payment, you reach the Refounder level and can express your ideas.",
+    noteInvalid: "The agent would like to deepen your commitment before validating it.",
+    points: "Points raised:", retestPre: "New attempt possible from", finalize: "Finalise my membership (payment)",
+    intro: "The Subsidium Charter of Commitment is not a formality: an agent guides you through a short interview to check that you understand and adhere to the four commitments of the charter (Truth, Respect, Responsibility, Hope). Answer in your own words. You become a Refounder once your membership is validated and payment is made.",
+    startBtn: "Start the membership interview", agentLabel: "SUBSIDIUM Charter Agent",
+    replyPh: "Your reply…", send: "Send", conclude: "Conclude and validate my membership",
+  },
+  it: {
+    noReply: "(nessuna risposta)", connErr: "Connessione all'agente impossibile. Riprova.", validErr: "Convalida impossibile per ora.",
+    vValid: "Adesione convalidata", vDeepen: "Da approfondire",
+    noteValid: "La tua adesione alla carta è convalidata. Dopo il pagamento, accedi al livello Rifondatore e puoi esprimere le tue idee.",
+    noteInvalid: "L'agente desidera approfondire la tua adesione prima di convalidarla.",
+    points: "Punti sollevati:", retestPre: "Nuovo tentativo possibile dal", finalize: "Finalizzare la mia adesione (pagamento)",
+    intro: "La Carta d'impegno Subsidium non è una formalità: un agente ti accompagna in un breve colloquio per verificare che comprendi e aderisci ai quattro impegni della carta (Verità, Rispetto, Responsabilità, Speranza). Rispondi con parole tue. Diventi Rifondatore una volta convalidata l'adesione ed effettuato il pagamento.",
+    startBtn: "Iniziare il colloquio di adesione", agentLabel: "Agente Carta SUBSIDIUM",
+    replyPh: "La tua risposta…", send: "Invia", conclude: "Concludere e convalidare la mia adesione",
+  },
+};
+
 function splitQuestion(text: string) {
   const re = /QUESTION\s*:/gi;
   let last = -1;
@@ -23,9 +56,9 @@ function splitQuestion(text: string) {
   };
 }
 
-// Entretien d'adhésion à la Charte (agent « charte » = Charte Light, agent1).
-// La validation est re-vérifiée côté serveur via /api/progression/charte (l'agent rescore).
 export default function CharteChat() {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
   const [history, setHistory] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,10 +82,10 @@ export default function CharteChat() {
         body: JSON.stringify({ agent: "charte", messages: next }),
       });
       const d = await r.json();
-      const reply: string = d.reply || d.error || "(pas de réponse)";
+      const reply: string = d.reply || d.error || tr.noReply;
       setHistory([...next, { role: "assistant", content: reply }]);
     } catch {
-      setError("Connexion à l'agent impossible. Réessayez.");
+      setError(tr.connErr);
     }
     setBusy(false);
   }
@@ -80,7 +113,6 @@ export default function CharteChat() {
     setError("");
     const transcript = history.map((m) => (m.role === "user" ? "Visiteur: " : "Agent: ") + m.content).join("\n");
     try {
-      // L'endpoint re-vérifie l'entretien via l'agent (autoritatif) et persiste si valide.
       const r = await fetch("/app/api/progression/charte", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,7 +127,7 @@ export default function CharteChat() {
         motifs: rr.motifs || rr.reserves || rr.raisons || [],
       });
     } catch {
-      setError("Validation impossible pour le moment.");
+      setError(tr.validErr);
     }
     setBusy(false);
   }
@@ -103,21 +135,17 @@ export default function CharteChat() {
   if (verdict) {
     return (
       <div className="eval-result">
-        <span className="eval-palier">{verdict.valide ? "Adhésion validée" : "À approfondir"}</span>
-        <p className="eval-note">
-          {verdict.valide
-            ? "Votre adhésion à la charte est validée. Après le paiement, vous accédez au niveau Refondateur et pouvez exprimer vos idées."
-            : "L'agent souhaite approfondir votre adhésion avant de la valider."}
-        </p>
+        <span className="eval-palier">{verdict.valide ? tr.vValid : tr.vDeepen}</span>
+        <p className="eval-note">{verdict.valide ? tr.noteValid : tr.noteInvalid}</p>
         {verdict.motifs.length > 0 && (
-          <p className="eval-reserves">Points soulevés : {verdict.motifs.join(" · ")}</p>
+          <p className="eval-reserves">{tr.points} {verdict.motifs.join(" · ")}</p>
         )}
         {!verdict.valide && verdict.retest && (
-          <p className="eval-reserves">Nouvel essai possible à partir du {verdict.retest}.</p>
+          <p className="eval-reserves">{tr.retestPre} {verdict.retest}.</p>
         )}
         {verdict.valide && (
           <Link href="/paiement" className="btn btn-coral" style={{ marginTop: 8, display: "inline-block" }}>
-            Finaliser mon adhésion (paiement)
+            {tr.finalize}
           </Link>
         )}
       </div>
@@ -127,13 +155,8 @@ export default function CharteChat() {
   if (!started) {
     return (
       <div className="eval-intro">
-        <p>
-          La charte d'engagement Subsidium n'est pas une formalité : un agent vous accompagne dans un
-          court entretien pour vérifier que vous comprenez et adhérez aux quatre engagements de la charte
-          (Vérité, Respect, Responsabilité, Espérance). Répondez avec vos propres mots. Vous devenez
-          Refondateur une fois l'adhésion validée et le paiement effectué.
-        </p>
-        <button type="button" className="btn btn-coral" onClick={start}>Commencer l'entretien d'adhésion</button>
+        <p>{tr.intro}</p>
+        <button type="button" className="btn btn-coral" onClick={start}>{tr.startBtn}</button>
       </div>
     );
   }
@@ -153,7 +176,7 @@ export default function CharteChat() {
           const { intro, question } = splitQuestion(m.content);
           return (
             <div className="bub-row bot" key={i}>
-              <span className="bub-label">Agent Charte SUBSIDIUM</span>
+              <span className="bub-label">{tr.agentLabel}</span>
               {intro && <div className="bub bot">{intro}</div>}
               {question && <div className="bub-q">{question}</div>}
               {!intro && !question && <div className="bub bot">{m.content}</div>}
@@ -162,7 +185,7 @@ export default function CharteChat() {
         })}
         {busy && (
           <div className="bub-row bot">
-            <span className="bub-label">Agent Charte SUBSIDIUM</span>
+            <span className="bub-label">{tr.agentLabel}</span>
             <div className="bub bot typing"><span></span><span></span><span></span></div>
           </div>
         )}
@@ -175,15 +198,15 @@ export default function CharteChat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-          placeholder="Votre réponse…"
+          placeholder={tr.replyPh}
           disabled={busy}
         />
         <button type="button" className="btn btn-coral" onClick={send} disabled={busy || !input.trim()}>
-          Envoyer
+          {tr.send}
         </button>
       </div>
       <button type="button" className="btn btn-ghost eval-finish" onClick={finish} disabled={busy || history.length < 2}>
-        Conclure et valider mon adhésion
+        {tr.conclude}
       </button>
     </div>
   );
