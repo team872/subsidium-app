@@ -85,7 +85,7 @@ export default function MarchePage() {
   }
 
   if (ready && !peutPorterInitiative(rang)) {
-    const etape = prochaineEtape(rang);
+    const etape = prochaineEtape(rang, undefined, undefined, lang);
     return (
       <AppShell>
         <div className="board-head"><h1>{tr.title}</h1></div>
