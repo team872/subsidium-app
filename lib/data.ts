@@ -92,14 +92,14 @@ export async function getIdea(id: number): Promise<IdeaDTO | null> {
   return rows[0] ?? null;
 }
 
-export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number; location?: string | null; lat?: number | null; lon?: number | null }): Promise<IdeaDTO> {
+export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number; location?: string | null; lat?: number | null; lon?: number | null; image?: string | null }): Promise<IdeaDTO> {
   await ensureDb();
   await ensureImageCols();
   const rows = await query<IdeaDTO>(
-    `INSERT INTO ideas (cat,color,title,descr,author,author_id,status,base_messages,date_label,location,lat,lon)
-     VALUES ($1,$2,$3,$4,$5,$6,'emise',0,to_char(now(),'DD/MM'),$7,$8,$9)
+    `INSERT INTO ideas (cat,color,title,descr,author,author_id,status,base_messages,date_label,location,lat,lon,image)
+     VALUES ($1,$2,$3,$4,$5,$6,'emise',0,to_char(now(),'DD/MM'),$7,$8,$9,$10)
      RETURNING id, cat, color, title, descr AS "desc", author, status, date_label AS "date", location, lat, lon, image, 0 AS messages`,
-    [d.cat, d.color, d.title, d.desc, d.author, d.authorId, d.location ?? null, d.lat ?? null, d.lon ?? null]
+    [d.cat, d.color, d.title, d.desc, d.author, d.authorId, d.location ?? null, d.lat ?? null, d.lon ?? null, d.image ?? null]
   );
   return rows[0];
 }
