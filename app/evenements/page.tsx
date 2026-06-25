@@ -44,12 +44,31 @@ const TAGS = ["Tout afficher", "Nouveauté", "Concertation", "Forum", "Atelier",
 const TAG_KEY: Record<string, string> = { "Tout afficher": "tAll", "Nouveauté": "tNews", "Concertation": "tConcert", "Forum": "tForum", "Atelier": "tAtelier", "Rencontre": "tRencontre", "Récit": "tRecit" };
 function tagLabel(t: string, tr: Dict) { return tr[TAG_KEY[t]] || t; }
 
+// Pictogramme thématique affiché en filigrane quand aucune photo n'est associée.
+const GLYPH: Record<string, string> = {
+  "Nouveauté": "✨", "Concertation": "🗳️", "Forum": "🤝", "Atelier": "🛠️", "Rencontre": "☕", "Récit": "📖",
+};
+function glyph(tag: string) { return GLYPH[tag] || "📍"; }
+
+function phStyle(ev: EventDTO): React.CSSProperties {
+  if (ev.image) {
+    return {
+      backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.12), rgba(40,28,52,.58)), url("${ev.image}")`,
+      backgroundSize: "cover", backgroundPosition: "center", position: "relative",
+    };
+  }
+  return { backgroundImage: ev.grad, position: "relative", overflow: "hidden" };
+}
+
 function EventCard({ ev }: { ev: EventDTO }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
   return (
     <article className="acard">
-      <div className="ph" style={{ backgroundImage: ev.grad }}>
+      <div className="ph" style={phStyle(ev)}>
+        {!ev.image && (
+          <span aria-hidden="true" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 60, opacity: 0.34, filter: "saturate(.6)" }}>{glyph(ev.tag)}</span>
+        )}
         <span className="tg">{tagLabel(ev.tag, tr)}</span>
         <span className="dt"><b>{ev.day}</b><small>{ev.month}</small></span>
       </div>
@@ -67,7 +86,7 @@ function EventRow({ ev }: { ev: EventDTO }) {
   const tr = DICT[lang] || DICT.fr;
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid #EBD9CD", borderRadius: 14, background: "#fff", padding: "12px 14px" }}>
-      <div style={{ flexShrink: 0, width: 48, borderRadius: 10, backgroundImage: ev.grad, color: "#fff", textAlign: "center", padding: "8px 0", lineHeight: 1.1 }}>
+      <div style={{ flexShrink: 0, width: 48, borderRadius: 10, backgroundImage: ev.image ? `linear-gradient(180deg, rgba(40,28,52,.15), rgba(40,28,52,.55)), url("${ev.image}")` : ev.grad, backgroundSize: "cover", backgroundPosition: "center", color: "#fff", textAlign: "center", padding: "8px 0", lineHeight: 1.1 }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>{ev.day}</div>
         <div style={{ fontSize: 10.5, textTransform: "uppercase" }}>{ev.month}</div>
       </div>
