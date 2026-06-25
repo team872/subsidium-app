@@ -1,47 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { useLang } from "@/components/LangProvider";
 import "@/components/MemberBoards.css";
 
-type Step = { key: string; titre: string; contenu: string };
+type Lecon = { titre: string; corps: string };
+type Ressource = { label: string; href?: string };
+type Step = { key: string; titre: string; contenu: string; lecons?: Lecon[]; points_cles?: string[]; ressources?: Ressource[] };
 type Cert = { statut: "en_attente" | "certifie" | "refuse" } | null;
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
   fr: {
     title: "Parcours Leader",
-    intro: "Le parcours Leader prépare les Initiateurs à devenir Refondateurs Certifiés : porter la doctrine, animer un collectif et faire grandir d'autres citoyens. Parcourez les étapes, puis demandez votre certification — elle sera validée par l'équipe Subsidium.",
+    intro: "Le parcours Leader prépare les Initiateurs à devenir Refondateurs Certifiés : porter la doctrine, animer un collectif et faire grandir d'autres citoyens. Parcourez les modules, puis demandez votre certification — elle sera validée par l'équipe Subsidium.",
     loading: "Chargement…",
     certified: "✔ Vous êtes Refondateur Certifié (Leader). Vous pouvez créer et animer des Clubs.",
     markUndone: "Marquer non terminé", markDone: "Marquer terminé", step: "Étape",
     pending: "Votre demande de certification est en attente de validation par l'équipe Subsidium.",
     refused: "Votre précédente demande n'a pas été retenue. Vous pouvez la représenter.",
     request: "Demander la certification Leader", sending: "Envoi…",
-    finishHint1: "Terminez les", finishHint2: "étapes pour pouvoir demander votre certification.", reqErr: "Demande impossible.",
+    finishHint1: "Terminez les", finishHint2: "modules pour pouvoir demander votre certification.", reqErr: "Demande impossible.",
+    module: "Voir le module", keyPoints: "Points clés", resources: "Ressources",
+    markDoneBtn: "Marquer comme terminé", markUndoneBtn: "Marquer comme à revoir", close: "Fermer",
   },
   en: {
     title: "Leader Path",
-    intro: "The Leader Path prepares Initiators to become Certified Refounders: carrying the doctrine, leading a group and helping other citizens grow. Go through the steps, then request your certification — it will be validated by the Subsidium team.",
+    intro: "The Leader Path prepares Initiators to become Certified Refounders: carrying the doctrine, leading a group and helping other citizens grow. Go through the modules, then request your certification — it will be validated by the Subsidium team.",
     loading: "Loading…",
     certified: "✔ You are a Certified Refounder (Leader). You can create and run Clubs.",
     markUndone: "Mark as not done", markDone: "Mark as done", step: "Step",
     pending: "Your certification request is awaiting validation by the Subsidium team.",
     refused: "Your previous request was not accepted. You can submit it again.",
     request: "Request Leader certification", sending: "Sending…",
-    finishHint1: "Complete the", finishHint2: "steps to request your certification.", reqErr: "Request failed.",
+    finishHint1: "Complete the", finishHint2: "modules to request your certification.", reqErr: "Request failed.",
+    module: "View module", keyPoints: "Key points", resources: "Resources",
+    markDoneBtn: "Mark as done", markUndoneBtn: "Mark as to review", close: "Close",
   },
   it: {
     title: "Percorso Leader",
-    intro: "Il Percorso Leader prepara gli Iniziatori a diventare Rifondatori Certificati: portare la dottrina, animare un collettivo e far crescere altri cittadini. Segui le tappe, poi richiedi la tua certificazione — sarà convalidata dal team Subsidium.",
+    intro: "Il Percorso Leader prepara gli Iniziatori a diventare Rifondatori Certificati: portare la dottrina, animare un collettivo e far crescere altri cittadini. Segui i moduli, poi richiedi la tua certificazione — sarà convalidata dal team Subsidium.",
     loading: "Caricamento…",
     certified: "✔ Sei un Rifondatore Certificato (Leader). Puoi creare e animare dei Club.",
     markUndone: "Segna come non completato", markDone: "Segna come completato", step: "Tappa",
     pending: "La tua richiesta di certificazione è in attesa di convalida da parte del team Subsidium.",
     refused: "La tua richiesta precedente non è stata accettata. Puoi ripresentarla.",
     request: "Richiedi la certificazione Leader", sending: "Invio…",
-    finishHint1: "Completa le", finishHint2: "tappe per richiedere la certificazione.", reqErr: "Richiesta impossibile.",
+    finishHint1: "Completa i", finishHint2: "moduli per richiedere la certificazione.", reqErr: "Richiesta impossibile.",
+    module: "Apri il modulo", keyPoints: "Punti chiave", resources: "Risorse",
+    markDoneBtn: "Segna come completato", markUndoneBtn: "Segna come da rivedere", close: "Chiudi",
   },
 };
 
@@ -54,6 +63,7 @@ export default function LeaderPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [openStep, setOpenStep] = useState<Step | null>(null);
 
   useEffect(() => {
     fetch("/app/api/leader").then((r) => r.json()).then((d) => {
@@ -114,10 +124,13 @@ export default function LeaderPage() {
                   <button onClick={() => toggle(s.key, isDone)} aria-label={isDone ? tr.markUndone : tr.markDone} style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: isDone ? "none" : "2px solid #E3D7CC", background: isDone ? "#5E8A57" : "#fff", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
                     {isDone && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}
                   </button>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: 800, color: "#9C919E", textTransform: "uppercase", letterSpacing: ".03em" }}>{tr.step} {i + 1}</div>
                     <h3 style={{ margin: "2px 0 6px", color: "#372646" }}>{s.titre}</h3>
                     <p style={{ color: "#5E4A73", fontSize: 14, margin: 0, lineHeight: 1.55 }}>{s.contenu}</p>
+                    {(s.lecons?.length || s.points_cles?.length || s.ressources?.length) ? (
+                      <button type="button" className="btn btn-ghost" style={{ marginTop: 10, padding: "5px 12px", fontSize: 13 }} onClick={() => setOpenStep(s)}>{tr.module}</button>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -139,6 +152,45 @@ export default function LeaderPage() {
                 {error && <p className="msg" style={{ marginTop: 8 }}>{error}</p>}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {openStep && (
+        <div className="modal-overlay" onClick={() => setOpenStep(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+            <div className="modal-head"><h2>{openStep.titre}</h2><button className="modal-x" onClick={() => setOpenStep(null)} aria-label={tr.close}>×</button></div>
+            <div className="modal-body">
+              <p style={{ color: "#5E4A73", lineHeight: 1.6, margin: "0 0 14px" }}>{openStep.contenu}</p>
+              {openStep.lecons?.map((l, i) => (
+                <div key={i} style={{ marginBottom: 12 }}>
+                  <h3 style={{ margin: "0 0 4px", color: "#372646", fontSize: 15 }}>{l.titre}</h3>
+                  <p style={{ margin: 0, color: "#5E4A73", fontSize: 14, lineHeight: 1.55 }}>{l.corps}</p>
+                </div>
+              ))}
+              {openStep.points_cles && openStep.points_cles.length > 0 && (
+                <div style={{ background: "#FBF4EC", border: "1px solid #EBD9CD", borderRadius: 12, padding: "12px 16px", margin: "6px 0 12px" }}>
+                  <div style={{ fontWeight: 800, color: "#372646", marginBottom: 6, fontSize: 14 }}>{tr.keyPoints}</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: "#5E4A73", lineHeight: 1.6, fontSize: 14 }}>
+                    {openStep.points_cles.map((p, i) => <li key={i}>{p}</li>)}
+                  </ul>
+                </div>
+              )}
+              {openStep.ressources && openStep.ressources.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 800, color: "#372646", marginBottom: 6, fontSize: 14 }}>{tr.resources}</div>
+                  {openStep.ressources.map((r, i) => r.href
+                    ? <Link key={i} href={r.href} style={{ display: "block", color: "#C2452F", fontWeight: 600, fontSize: 14, margin: "2px 0" }}>{r.label} →</Link>
+                    : <span key={i} style={{ display: "block", color: "#5E4A73", fontSize: 14, margin: "2px 0" }}>{r.label}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="modal-foot">
+              <button className={done.includes(openStep.key) ? "btn btn-ghost" : "btn btn-coral"} onClick={() => toggle(openStep.key, done.includes(openStep.key))}>
+                {done.includes(openStep.key) ? tr.markUndoneBtn : tr.markDoneBtn}
+              </button>
+            </div>
           </div>
         </div>
       )}
