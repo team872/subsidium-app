@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import MaillageS from "@/components/MaillageS";
 import { useLang } from "@/components/LangProvider";
 import "@/components/MemberBoards.css";
 
@@ -242,6 +243,8 @@ export default function ProjetDetailPage() {
           </section>
         </div>
       )}
+
+      {!restricted && <MaillageS projetId={id} projetTitle={projet.title} />}
 
       {showCand && (
         <div className="modal-overlay" onClick={() => setShowCand(false)}>
