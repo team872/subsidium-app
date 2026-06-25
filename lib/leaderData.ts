@@ -1,12 +1,12 @@
 import { query } from "./db";
 import { setNiveau } from "./admin";
 
-// Module Leader + Clubs (« One More Thing »), version V1 incluse.
-// - Parcours de formation Leader (étapes) + demande de certification → validation admin (N3).
-// - Clubs : création (Leader N3+), adhésion, mur de partage.
-// Tables créées/amorcées à la demande (auto-contenu).
+// Module Leader + Clubs. Parcours de formation Leader (MOOC light : leçons, points clés,
+// ressources par étape) + demande de certification → validation admin (N3). Clubs.
 
-export type LeaderStep = { key: string; titre: string; contenu: string };
+export type LeaderLecon = { titre: string; corps: string };
+export type LeaderRessource = { label: string; href?: string };
+export type LeaderStep = { key: string; titre: string; contenu: string; lecons?: LeaderLecon[]; points_cles?: string[]; ressources?: LeaderRessource[] };
 export type CertStatut = "en_attente" | "certifie" | "refuse";
 export type CertRequest = { id: number; user_id: number; nom: string; prenom: string; email: string; niveau: number; created_at: string };
 export type ClubDTO = { id: number; name: string; theme: string | null; descr: string; owner_id: number | null; members: number; grad: string };
@@ -14,11 +14,61 @@ export type ClubMember = { nom: string; prenom: string; role: string };
 export type ClubPost = { id: number; corps: string; auteur: string; created_at: string };
 
 export const LEADER_STEPS: LeaderStep[] = [
-  { key: "comprendre", titre: "Comprendre la subsidiarité", contenu: "Au cœur de SUBSIDIUM, la subsidiarité confie chaque décision au niveau le plus proche des personnes concernées. Un Leader sait reconnaître qui est légitime pour agir, et créer les conditions pour que chacun prenne sa part. Cette étape pose le socle doctrinal de votre rôle." },
-  { key: "ethique", titre: "Incarner l'éthique du Refondateur", contenu: "Vérité, Respect, Responsabilité, Espérance : les quatre engagements de la charte ne se décrètent pas, ils s'incarnent. Un Leader est exemplaire dans sa manière de débattre, de décider et de rendre compte. On explore ici les situations concrètes où l'éthique se joue." },
-  { key: "animer", titre: "Animer un collectif citoyen", contenu: "Faciliter la parole, accueillir le désaccord, faire émerger des décisions partagées : l'animation est un métier. Cette étape donne les méthodes pour conduire une réunion, structurer un débat et maintenir l'énergie d'un groupe dans la durée." },
-  { key: "piloter", titre: "Piloter un projet d'intérêt général", contenu: "De l'idée à l'action : cadrer un objectif, répartir les rôles, suivre l'avancement et lever les blocages. Le Leader transforme l'envie d'agir en résultats concrets, sans confisquer l'initiative collective." },
-  { key: "transmettre", titre: "Transmettre et faire grandir", contenu: "Un Leader ne retient pas le pouvoir : il fait grandir d'autres Leaders. Mentorat, délégation, valorisation des réussites — cette dernière étape vous prépare à essaimer la démarche et à animer un Club." },
+  {
+    key: "comprendre", titre: "Comprendre la subsidiarité",
+    contenu: "Au cœur de SUBSIDIUM, la subsidiarité confie chaque décision au niveau le plus proche des personnes concernées. Un Leader sait reconnaître qui est légitime pour agir, et créer les conditions pour que chacun prenne sa part. Cette étape pose le socle doctrinal de votre rôle.",
+    lecons: [
+      { titre: "Le principe", corps: "La subsidiarité confie chaque décision et chaque action au niveau le plus proche des personnes concernées, capable de l'assumer. L'échelon supérieur n'intervient que pour soutenir (subsidium = aide), jamais pour remplacer ce que le niveau local peut faire lui-même." },
+      { titre: "Reconnaître qui est légitime", corps: "Avant d'agir, le Leader se demande : qui vit ce problème ? qui a la compétence et la légitimité pour décider ? Son rôle n'est pas de prendre la place, mais de créer les conditions pour que les bonnes personnes prennent la leur." },
+      { titre: "Créer les conditions de l'autonomie", corps: "Soutenir sans confisquer : donner accès à l'information, aux ressources et à la méthode, puis se retirer. Un collectif qui décide par lui-même s'engage durablement ; un collectif à qui l'on dicte la solution se démobilise." },
+    ],
+    points_cles: ["Le niveau le plus proche d'abord", "Aider (subsidium), pas remplacer", "Repérer la légitimité avant d'agir", "Autonomie = engagement durable"],
+    ressources: [{ label: "Charte d'engagement SUBSIDIUM", href: "/charte" }],
+  },
+  {
+    key: "ethique", titre: "Incarner l'éthique du Refondateur",
+    contenu: "Vérité, Respect, Responsabilité, Espérance : les quatre engagements de la charte ne se décrètent pas, ils s'incarnent. Un Leader est exemplaire dans sa manière de débattre, de décider et de rendre compte. On explore ici les situations concrètes où l'éthique se joue.",
+    lecons: [
+      { titre: "Quatre engagements vécus", corps: "Vérité, Respect, Responsabilité, Espérance ne sont pas des slogans : ils se jouent dans des situations concrètes — un désaccord vif, une rumeur, une décision difficile. Le Leader est regardé : sa cohérence fait autorité bien plus que son discours." },
+      { titre: "L'exemplarité au quotidien", corps: "Dire la vérité même quand elle dérange, écouter celui avec qui l'on n'est pas d'accord, assumer ses erreurs publiquement, et garder le cap de l'espérance quand le groupe doute. C'est cette constance qui crée la confiance." },
+      { titre: "Gérer les zones grises", corps: "L'éthique se révèle dans les cas ambigus : un raccourci tentant, un conflit d'intérêt discret, une parole blessante « pour de bon ». Le réflexe du Leader : ralentir, nommer l'enjeu, et choisir ce qui honore les quatre engagements." },
+    ],
+    points_cles: ["L'éthique se vit, ne se décrète pas", "La cohérence fait autorité", "Assumer ses erreurs publiquement", "Ralentir face aux zones grises"],
+    ressources: [{ label: "Auto-évaluation éthique", href: "/auto-evaluation" }],
+  },
+  {
+    key: "animer", titre: "Animer un collectif citoyen",
+    contenu: "Faciliter la parole, accueillir le désaccord, faire émerger des décisions partagées : l'animation est un métier. Cette étape donne les méthodes pour conduire une réunion, structurer un débat et maintenir l'énergie d'un groupe dans la durée.",
+    lecons: [
+      { titre: "Faciliter la parole", corps: "Animer, ce n'est pas parler le plus : c'est faire parler. Tour de table, temps de silence, reformulation : le Leader répartit la parole, fait place aux plus discrets et empêche la confiscation par les plus à l'aise." },
+      { titre: "Accueillir le désaccord", corps: "Le conflit d'idées est une ressource, pas une menace. Le Leader distingue la personne du propos, cherche le besoin derrière la position, et transforme l'opposition en matière à décider ensemble." },
+      { titre: "Conduire une réunion utile", corps: "Un objectif clair, un ordre du jour minuté, une décision formulée et un relevé d'actions. Une réunion sans décision ni suite démobilise ; une réunion qui aboutit donne de l'énergie au groupe." },
+    ],
+    points_cles: ["Faire parler plutôt que parler", "Le désaccord est une ressource", "Objectif + décision + suite", "Protéger les voix discrètes"],
+    ressources: [{ label: "Espace de travail d'un projet", href: "/projets" }],
+  },
+  {
+    key: "piloter", titre: "Piloter un projet d'intérêt général",
+    contenu: "De l'idée à l'action : cadrer un objectif, répartir les rôles, suivre l'avancement et lever les blocages. Le Leader transforme l'envie d'agir en résultats concrets, sans confisquer l'initiative collective.",
+    lecons: [
+      { titre: "Cadrer avant de courir", corps: "Un objectif précis (quoi, pour qui, pour quand), un périmètre assumé et des critères de réussite. Le pilotage commence par dire non à ce qui disperse, pour concentrer l'énergie sur l'essentiel." },
+      { titre: "Répartir et suivre", corps: "Des rôles clairs, des jalons visibles, un point régulier. Le tableau de bord du projet (tâches, jalons) rend l'avancement tangible et permet de lever les blocages tôt, avant qu'ils ne s'enkystent." },
+      { titre: "Sans confisquer l'initiative", corps: "Piloter n'est pas tout faire : c'est garantir que ça avance tout en laissant chacun porter sa part. Le Leader délègue de vraies responsabilités, pas seulement des tâches." },
+    ],
+    points_cles: ["Objectif précis et critères de réussite", "Rôles + jalons + point régulier", "Lever les blocages tôt", "Déléguer des responsabilités, pas que des tâches"],
+    ressources: [{ label: "Créer et piloter un projet", href: "/projets" }],
+  },
+  {
+    key: "transmettre", titre: "Transmettre et faire grandir",
+    contenu: "Un Leader ne retient pas le pouvoir : il fait grandir d'autres Leaders. Mentorat, délégation, valorisation des réussites — cette dernière étape vous prépare à essaimer la démarche et à animer un Club.",
+    lecons: [
+      { titre: "Faire grandir d'autres Leaders", corps: "La réussite d'un Leader se mesure aux Leaders qu'il fait émerger. Repérer les talents, leur confier des espaces réels, les accompagner sans les couver : la démarche essaime par la confiance donnée." },
+      { titre: "Mentorat et délégation", corps: "Transmettre, c'est rendre l'autre capable de se passer de soi. Montrer, faire faire, laisser faire, puis valoriser. La délégation est un acte de formation, pas un simple transfert de charge." },
+      { titre: "Animer un Club", corps: "Le Club prolonge le parcours : un lieu durable où des citoyens se forment, partagent et lancent des actions. En tant que Leader certifié, vous pouvez créer et animer un Club pour faire vivre la démarche sur votre territoire." },
+    ],
+    points_cles: ["Se mesurer aux Leaders qu'on fait naître", "Montrer, faire faire, laisser faire", "Déléguer = former", "Le Club fait vivre la démarche"],
+    ressources: [{ label: "Découvrir les Clubs", href: "/clubs" }],
+  },
 ];
 
 const GRADS = [
