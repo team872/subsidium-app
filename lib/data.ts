@@ -1,5 +1,6 @@
 import { ensureDb, query } from "./db";
 import { recomputeNiveau } from "./progression";
+import { ensureImageCols, ensureRichEvents } from "./cardImages";
 
 export type PublicUser = {
   id: number; email: string; nom: string | null; prenom: string | null;
@@ -69,32 +70,35 @@ export async function applyProgression(
 export type IdeaDTO = {
   id: number; cat: string; color: string; title: string; desc: string;
   author: string; status: string | null; date: string; messages: number;
-  location: string | null; lat: number | null; lon: number | null;
+  location: string | null; lat: number | null; lon: number | null; image: string | null;
 };
 
 const IDEA_SELECT = `
   SELECT i.id, i.cat, i.color, i.title, i.descr AS "desc", i.author, i.status,
-         i.date_label AS "date", i.location, i.lat, i.lon,
+         i.date_label AS "date", i.location, i.lat, i.lon, i.image,
          (i.base_messages + (SELECT COUNT(*) FROM comments c WHERE c.idea_id = i.id))::int AS messages
   FROM ideas i`;
 
 export async function listIdeas(): Promise<IdeaDTO[]> {
   await ensureDb();
+  await ensureImageCols();
   return query<IdeaDTO>(`${IDEA_SELECT} ORDER BY i.created_at DESC, i.id DESC`);
 }
 
 export async function getIdea(id: number): Promise<IdeaDTO | null> {
   await ensureDb();
+  await ensureImageCols();
   const rows = await query<IdeaDTO>(`${IDEA_SELECT} WHERE i.id = $1`, [id]);
   return rows[0] ?? null;
 }
 
 export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number; location?: string | null; lat?: number | null; lon?: number | null }): Promise<IdeaDTO> {
   await ensureDb();
+  await ensureImageCols();
   const rows = await query<IdeaDTO>(
     `INSERT INTO ideas (cat,color,title,descr,author,author_id,status,base_messages,date_label,location,lat,lon)
      VALUES ($1,$2,$3,$4,$5,$6,'emise',0,to_char(now(),'DD/MM'),$7,$8,$9)
-     RETURNING id, cat, color, title, descr AS "desc", author, status, date_label AS "date", location, lat, lon, 0 AS messages`,
+     RETURNING id, cat, color, title, descr AS "desc", author, status, date_label AS "date", location, lat, lon, image, 0 AS messages`,
     [d.cat, d.color, d.title, d.desc, d.author, d.authorId, d.location ?? null, d.lat ?? null, d.lon ?? null]
   );
   return rows[0];
@@ -169,11 +173,12 @@ export async function toggleFollow(userId: number, ideaId: number): Promise<bool
   return true;
 }
 
-export type EventDTO = { id: number; tag: string; title: string; desc: string; day: string; month: string; grad: string };
+export type EventDTO = { id: number; tag: string; title: string; desc: string; day: string; month: string; grad: string; image: string | null };
 
 export async function listEvents(): Promise<EventDTO[]> {
   await ensureDb();
-  return query<EventDTO>(`SELECT id, tag, title, descr AS "desc", day, month, grad FROM events ORDER BY id ASC`);
+  await ensureRichEvents();
+  return query<EventDTO>(`SELECT id, tag, title, descr AS "desc", day, month, grad, image FROM events ORDER BY id ASC`);
 }
 
 export async function userStats(userId: number): Promise<{ suivies: number; emises: number }> {
