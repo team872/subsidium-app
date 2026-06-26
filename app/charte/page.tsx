@@ -191,7 +191,7 @@ export default function ChartePage() {
       {mode === "assistant" && (
         <div style={{ maxWidth: 760 }}>
           <button onClick={() => setMode("choix")} className="board-back" style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 12 }}>{tr.back}</button>
-          <CharteChat />
+          <CharteChat onFallback={() => setMode("formulaire")} />
         </div>
       )}
     </AppShell>
