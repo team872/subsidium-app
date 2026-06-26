@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { useLang } from "@/components/LangProvider";
+import ImagePicker from "@/components/ImagePicker";
+import { keywordsFromText } from "@/lib/keywords";
 import "@/components/MemberBoards.css";
 
 const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
@@ -13,7 +15,7 @@ const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
   loading: () => <div className="board-empty">…</div>,
 });
 
-type Org = { id: number; name: string; type: string; region: string | null; desc: string; adresse: string | null; grad: string; labellisee?: boolean };
+type Org = { id: number; name: string; type: string; region: string | null; desc: string; adresse: string | null; grad: string; labellisee?: boolean; image: string | null };
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
@@ -24,7 +26,7 @@ const DICT: Record<string, Dict> = {
     list: "Liste", map: "Carte",
     loading: "Chargement des organisations…", empty: "Aucune organisation ne correspond à votre recherche.",
     reqName: "Le nom de l'organisation est requis.", createErr: "Création impossible.", creating: "Création…", createBtn: "Créer",
-    fName: "Nom de l'organisation", fType: "Type", fRegion: "Région / département", fDesc: "Description", fAdresse: "Adresse", fTel: "Téléphone", fMail: "Adresse mail", fSite: "Site internet",
+    fName: "Nom de l'organisation", fType: "Type", fRegion: "Région / département", fDesc: "Description", fAdresse: "Adresse", fTel: "Téléphone", fMail: "Adresse mail", fSite: "Site internet", fImage: "Image",
     phDesc: "Présentez la mission de votre organisation…",
     note: "Votre organisation sera soumise à labellisation par Subsidium avant d'apparaître dans l'annuaire.", close: "Fermer",
     tAssoc: "Association", tPublic: "Établissement public", tColl: "Collectivité territoriale", tEnt: "Entreprise", tAutre: "Autre",
@@ -36,7 +38,7 @@ const DICT: Record<string, Dict> = {
     list: "List", map: "Map",
     loading: "Loading organisations…", empty: "No organisation matches your search.",
     reqName: "The organisation name is required.", createErr: "Could not create.", creating: "Creating…", createBtn: "Create",
-    fName: "Organisation name", fType: "Type", fRegion: "Region / department", fDesc: "Description", fAdresse: "Address", fTel: "Phone", fMail: "Email address", fSite: "Website",
+    fName: "Organisation name", fType: "Type", fRegion: "Region / department", fDesc: "Description", fAdresse: "Address", fTel: "Phone", fMail: "Email address", fSite: "Website", fImage: "Image",
     phDesc: "Describe your organisation's mission…",
     note: "Your organisation will be submitted for accreditation by Subsidium before appearing in the directory.", close: "Close",
     tAssoc: "Nonprofit", tPublic: "Public institution", tColl: "Local authority", tEnt: "Company", tAutre: "Other",
@@ -48,7 +50,7 @@ const DICT: Record<string, Dict> = {
     list: "Elenco", map: "Mappa",
     loading: "Caricamento delle organizzazioni…", empty: "Nessuna organizzazione corrisponde alla ricerca.",
     reqName: "Il nome dell'organizzazione è obbligatorio.", createErr: "Creazione impossibile.", creating: "Creazione…", createBtn: "Crea",
-    fName: "Nome dell'organizzazione", fType: "Tipo", fRegion: "Regione / dipartimento", fDesc: "Descrizione", fAdresse: "Indirizzo", fTel: "Telefono", fMail: "Indirizzo e-mail", fSite: "Sito web",
+    fName: "Nome dell'organizzazione", fType: "Tipo", fRegion: "Regione / dipartimento", fDesc: "Descrizione", fAdresse: "Indirizzo", fTel: "Telefono", fMail: "Indirizzo e-mail", fSite: "Sito web", fImage: "Immagine",
     phDesc: "Presenta la missione della tua organizzazione…",
     note: "La tua organizzazione sarà sottoposta ad accreditamento da Subsidium prima di apparire nell'elenco.", close: "Chiudi",
     tAssoc: "Associazione", tPublic: "Ente pubblico", tColl: "Ente locale", tEnt: "Azienda", tAutre: "Altro",
@@ -62,12 +64,18 @@ function typeLabel(t: string, tr: Dict) { return tr[TYPE_KEY[t]] || t; }
 function initials(n: string) {
   return n.replace(/[^A-Za-zÀ-ſ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "O";
 }
+function orgHeader(o: Org) {
+  if (o.image) {
+    return <div style={{ height: 96, flexShrink: 0, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.4)), url("${o.image}")`, backgroundSize: "cover", backgroundPosition: "center" }} />;
+  }
+  return <div style={{ height: 96, flexShrink: 0, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>;
+}
 function OrgCard({ o }: { o: Org }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
   return (
     <Link href={`/organisations/${o.id}`} className="icard">
-      <div style={{ height: 96, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>
+      {orgHeader(o)}
       <div className="bd">
         <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{typeLabel(o.type, tr)}</span>
         <h3 style={{ marginTop: 4 }}>{o.name}</h3>
@@ -89,7 +97,7 @@ export default function OrganisationsPage() {
   const [view, setView] = useState<"liste" | "carte">("liste");
   const [allPoints, setAllPoints] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", type: "Association", region: "", desc: "", adresse: "", telephone: "", email: "", site: "" });
+  const [form, setForm] = useState({ name: "", type: "Association", region: "", desc: "", adresse: "", telephone: "", email: "", site: "", image: null as string | null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -135,7 +143,7 @@ export default function OrganisationsPage() {
           <div className="idees-grid">
             {mine.map((o) => (
               <Link key={o.id} href={`/organisations/${o.id}`} className="icard">
-                <div style={{ height: 96, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>
+                {orgHeader(o)}
                 <div className="bd">
                   <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{typeLabel(o.type, tr)}</span>
                   <h3 style={{ marginTop: 4 }}>{o.name}</h3>
@@ -190,6 +198,7 @@ export default function OrganisationsPage() {
               <div className="mfield"><label>{tr.fType}</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>{TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, tr)}</option>)}</select></div>
               <div className="mfield"><label>{tr.fRegion}</label><input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} /></div>
               <div className="mfield"><label>{tr.fDesc}</label><textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder={tr.phDesc} /></div>
+              <div className="mfield"><label>{tr.fImage}</label><ImagePicker seed={keywordsFromText(form.name, form.desc) || form.name.trim()} value={form.image} onPick={(u) => setForm({ ...form, image: u })} /></div>
               <div className="mfield"><label>{tr.fAdresse}</label><input value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} /></div>
               <div className="mfield"><label>{tr.fTel}</label><input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
               <div className="mfield"><label>{tr.fMail}</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>

@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { useLang } from "@/components/LangProvider";
+import ImagePicker from "@/components/ImagePicker";
+import { keywordsFromText } from "@/lib/keywords";
 import "@/components/MemberBoards.css";
 
 const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
@@ -13,7 +15,7 @@ const CarteSubsidium = dynamic(() => import("@/components/CarteSubsidium"), {
   loading: () => <div className="board-empty">…</div>,
 });
 
-type Projet = { id: number; title: string; theme: string | null; desc: string; lieu: string | null; prive: boolean; membres: number; grad: string };
+type Projet = { id: number; title: string; theme: string | null; desc: string; lieu: string | null; prive: boolean; membres: number; grad: string; image: string | null };
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
@@ -26,7 +28,7 @@ const DICT: Record<string, Dict> = {
     emptyTous: "Aucun projet pour le moment.", emptySuivis: "Vous ne suivez aucun projet.", emptyEmis: "Vous n'avez émis aucun projet.",
     projet: "Projet", prive: "privé", member: "membre", members: "membres",
     reqTitle: "Le titre du projet est requis.", createErr: "Création impossible.", creating: "Création…",
-    fTitle: "Titre du projet", fTheme: "Thème", fLieu: "Lieu", fDesc: "Description",
+    fTitle: "Titre du projet", fTheme: "Thème", fLieu: "Lieu", fDesc: "Description", fImage: "Image",
     phTheme: "Ex. Faire ensemble, Mobilité, Solidarité…", phLieu: "Ville, quartier…", phDesc: "Présentez l'objectif et le déroulé du projet…",
     priveLabel: "Projet privé (visible uniquement par les membres)", close: "Fermer",
   },
@@ -39,7 +41,7 @@ const DICT: Record<string, Dict> = {
     emptyTous: "No project yet.", emptySuivis: "You are not following any project.", emptyEmis: "You haven't created any project.",
     projet: "Project", prive: "private", member: "member", members: "members",
     reqTitle: "The project title is required.", createErr: "Could not create.", creating: "Creating…",
-    fTitle: "Project title", fTheme: "Theme", fLieu: "Location", fDesc: "Description",
+    fTitle: "Project title", fTheme: "Theme", fLieu: "Location", fDesc: "Description", fImage: "Image",
     phTheme: "E.g. Acting together, Mobility, Solidarity…", phLieu: "City, neighbourhood…", phDesc: "Describe the goal and the steps of the project…",
     priveLabel: "Private project (visible to members only)", close: "Close",
   },
@@ -52,7 +54,7 @@ const DICT: Record<string, Dict> = {
     emptyTous: "Nessun progetto per ora.", emptySuivis: "Non segui alcun progetto.", emptyEmis: "Non hai creato alcun progetto.",
     projet: "Progetto", prive: "privato", member: "membro", members: "membri",
     reqTitle: "Il titolo del progetto è obbligatorio.", createErr: "Creazione impossibile.", creating: "Creazione…",
-    fTitle: "Titolo del progetto", fTheme: "Tema", fLieu: "Luogo", fDesc: "Descrizione",
+    fTitle: "Titolo del progetto", fTheme: "Tema", fLieu: "Luogo", fDesc: "Descrizione", fImage: "Immagine",
     phTheme: "Es. Fare insieme, Mobilità, Solidarietà…", phLieu: "Città, quartiere…", phDesc: "Presenta l'obiettivo e lo svolgimento del progetto…",
     priveLabel: "Progetto privato (visibile solo ai membri)", close: "Chiudi",
   },
@@ -67,7 +69,11 @@ function ProjetCard({ p }: { p: Projet }) {
   const tr = DICT[lang] || DICT.fr;
   return (
     <Link href={`/projets/${p.id}`} className="icard">
-      <div style={{ height: 96, background: p.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(p.title)}</div>
+      {p.image ? (
+        <div style={{ height: 96, flexShrink: 0, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.4)), url("${p.image}")`, backgroundSize: "cover", backgroundPosition: "center" }} />
+      ) : (
+        <div style={{ height: 96, flexShrink: 0, background: p.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(p.title)}</div>
+      )}
       <div className="bd">
         <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{p.theme || tr.projet}{p.prive ? " · " + tr.prive : ""}</span>
         <h3 style={{ marginTop: 4 }}>{p.title}</h3>
@@ -89,7 +95,7 @@ export default function ProjetsPage() {
   const [view, setView] = useState<"liste" | "carte">("liste");
   const [allPoints, setAllPoints] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", theme: "", lieu: "", desc: "", prive: false });
+  const [form, setForm] = useState({ title: "", theme: "", lieu: "", desc: "", prive: false, image: null as string | null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -179,6 +185,7 @@ export default function ProjetsPage() {
               <div className="mfield"><label>{tr.fTheme}</label><input value={form.theme} onChange={(e) => setForm({ ...form, theme: e.target.value })} placeholder={tr.phTheme} /></div>
               <div className="mfield"><label>{tr.fLieu}</label><input value={form.lieu} onChange={(e) => setForm({ ...form, lieu: e.target.value })} placeholder={tr.phLieu} /></div>
               <div className="mfield"><label>{tr.fDesc}</label><textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder={tr.phDesc} /></div>
+              <div className="mfield"><label>{tr.fImage}</label><ImagePicker seed={keywordsFromText(form.title, form.desc) || form.title.trim()} value={form.image} onPick={(u) => setForm({ ...form, image: u })} /></div>
               <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#5E4A73", fontSize: 14, cursor: "pointer" }}>
                 <input type="checkbox" checked={form.prive} onChange={(e) => setForm({ ...form, prive: e.target.checked })} />
                 {tr.priveLabel}
