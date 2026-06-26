@@ -129,19 +129,18 @@ async function init(): Promise<void> {
     );
   `);
   await query(`ALTER TABLE clubs ADD COLUMN IF NOT EXISTS image TEXT`);
-  // Seed de clubs de démo (idempotent : seulement si aucun club).
-  const cc = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM clubs`);
-  if (cc[0].n === 0) {
-    const us = await query<{ id: number }>(`SELECT id FROM users ORDER BY id LIMIT 6`);
-    const ownerId = us[0]?.id ?? null;
-    for (let k = 0; k < SEED_CLUBS.length; k++) {
-      const s = SEED_CLUBS[k];
-      const r = await query<{ id: number }>(`INSERT INTO clubs (name,theme,descr,owner_id) VALUES ($1,$2,$3,$4) RETURNING id`, [s.name, s.theme, s.descr, ownerId]);
-      const cid = r[0].id;
-      const slice = us.slice(0, Math.min(us.length, 3 + k));
-      for (let i = 0; i < slice.length; i++) {
-        await query(`INSERT INTO club_members (club_id,user_id,role) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [cid, slice[i].id, i === 0 ? "owner" : "membre"]);
-      }
+  // Seed de clubs de démo — idempotent par nom (ajoute les manquants même si d'autres clubs existent).
+  const us = await query<{ id: number }>(`SELECT id FROM users ORDER BY id LIMIT 6`);
+  const ownerId = us[0]?.id ?? null;
+  for (let k = 0; k < SEED_CLUBS.length; k++) {
+    const s = SEED_CLUBS[k];
+    const exists = await query<{ id: number }>(`SELECT id FROM clubs WHERE name=$1`, [s.name]);
+    if (exists[0]) continue;
+    const r = await query<{ id: number }>(`INSERT INTO clubs (name,theme,descr,owner_id) VALUES ($1,$2,$3,$4) RETURNING id`, [s.name, s.theme, s.descr, ownerId]);
+    const cid = r[0].id;
+    const slice = us.slice(0, Math.min(us.length, 3 + k));
+    for (let i = 0; i < slice.length; i++) {
+      await query(`INSERT INTO club_members (club_id,user_id,role) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [cid, slice[i].id, i === 0 ? "owner" : "membre"]);
     }
   }
 }
