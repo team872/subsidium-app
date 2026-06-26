@@ -92,6 +92,12 @@ export default function ProjetDetailPage() {
   const [cform, setCform] = useState({ nom: "", prenom: "", email: "", presentation: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [backHref, setBackHref] = useState("/projets");
+
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("vue");
+    if (v === "liste" || v === "carte") setBackHref(`/projets?vue=${v}`);
+  }, []);
 
   function load() {
     return fetch(`/app/api/projets/${id}`).then((r) => r.json()).then((d) => {
@@ -142,15 +148,15 @@ export default function ProjetDetailPage() {
     load();
   }
 
-  if (loading) return <AppShell><Link href="/projets" className="board-back">← {tr.back}</Link><p className="board-empty">{tr.loading}</p></AppShell>;
-  if (!projet) return <AppShell><Link href="/projets" className="board-back">← {tr.back}</Link><p className="board-empty">{tr.notfound}</p></AppShell>;
+  if (loading) return <AppShell><Link href={backHref} className="board-back">← {tr.back}</Link><p className="board-empty">{tr.loading}</p></AppShell>;
+  if (!projet) return <AppShell><Link href={backHref} className="board-back">← {tr.back}</Link><p className="board-empty">{tr.notfound}</p></AppShell>;
 
   const peutPoster = role === "owner" || role === "membre";
   const peutCandidater = !isOwner && role !== "membre" && !hasCand;
 
   return (
     <AppShell>
-      <Link href="/projets" className="board-back">
+      <Link href={backHref} className="board-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>
         {tr.back}
       </Link>

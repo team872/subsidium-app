@@ -34,6 +34,12 @@ export default function OrgDetailPage() {
   const [corps, setCorps] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [backHref, setBackHref] = useState("/organisations");
+
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("vue");
+    if (v === "liste" || v === "carte") setBackHref(`/organisations?vue=${v}`);
+  }, []);
 
   useEffect(() => {
     fetch(`/app/api/organisations/${id}`).then((r) => r.json()).then((d) => setOrg(d.org || null)).catch(() => setOrg(null)).finally(() => setLoading(false));
@@ -56,12 +62,12 @@ export default function OrgDetailPage() {
     setBusy(false);
   }
 
-  if (loading) return <AppShell><Link href="/organisations" className="board-back">← Organisations</Link><p className="board-empty">Chargement…</p></AppShell>;
-  if (!org) return <AppShell><Link href="/organisations" className="board-back">← Organisations</Link><p className="board-empty">Organisation introuvable.</p></AppShell>;
+  if (loading) return <AppShell><Link href={backHref} className="board-back">← Organisations</Link><p className="board-empty">Chargement…</p></AppShell>;
+  if (!org) return <AppShell><Link href={backHref} className="board-back">← Organisations</Link><p className="board-empty">Organisation introuvable.</p></AppShell>;
 
   return (
     <AppShell>
-      <Link href="/organisations" className="board-back">
+      <Link href={backHref} className="board-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>
         Annuaire des organisations
       </Link>

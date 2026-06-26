@@ -26,9 +26,9 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-function IdeaCard({ it }: { it: IdeaDTO }) {
+function IdeaCard({ it, view }: { it: IdeaDTO; view: "liste" | "carte" }) {
   return (
-    <Link href={`/idees/${it.id}`} className="icard">
+    <Link href={`/idees/${it.id}?vue=${view}`} className="icard">
       {it.image ? (
         <div style={{ height: 120, flexShrink: 0, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.45)), url("${it.image}")`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
           <span style={{ position: "absolute", left: 12, top: 12, background: it.color, color: "#fff", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", padding: "3px 10px", borderRadius: 999 }}>{it.cat}</span>
@@ -64,6 +64,17 @@ export default function IdeesPage() {
   const etape = prochaineEtape(rang, charteValidee, paye);
 
   useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("vue");
+    if (v === "liste" || v === "carte") setView(v);
+  }, []);
+  function changeView(v: "liste" | "carte") {
+    setView(v);
+    const sp = new URLSearchParams(window.location.search);
+    sp.set("vue", v);
+    window.history.replaceState(null, "", `${window.location.pathname}?${sp.toString()}`);
+  }
+
+  useEffect(() => {
     fetch("/app/api/ideas")
       .then((r) => r.json())
       .then((d) => setItems(d.ideas || []))
@@ -88,7 +99,7 @@ export default function IdeesPage() {
   const points = useMemo(() =>
     list
       .filter((it) => typeof it.lat === "number" && typeof it.lon === "number")
-      .map((it) => ({ id: it.id, lat: it.lat as number, lon: it.lon as number, title: it.title, subtitle: it.cat, color: "#C2452F", href: `/app/idees/${it.id}` })),
+      .map((it) => ({ id: it.id, lat: it.lat as number, lon: it.lon as number, title: it.title, subtitle: it.cat, color: "#C2452F", href: `/app/idees/${it.id}?vue=carte` })),
   [list]);
 
   return (
@@ -127,8 +138,8 @@ export default function IdeesPage() {
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <div style={{ display: "inline-flex", border: "1px solid #E3D7CC", borderRadius: 10, overflow: "hidden", marginLeft: "auto" }}>
-          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>Liste</button>
-          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>Carte</button>
+          <button type="button" onClick={() => changeView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>Liste</button>
+          <button type="button" onClick={() => changeView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>Carte</button>
         </div>
       </div>
 
@@ -139,7 +150,7 @@ export default function IdeesPage() {
       ) : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((it) => <IdeaCard key={it.id} it={it} />)}
+            {list.map((it) => <IdeaCard key={it.id} it={it} view={view} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />
@@ -147,7 +158,7 @@ export default function IdeesPage() {
         </div>
       ) : (
         <div className="idees-grid">
-          {list.map((it) => <IdeaCard key={it.id} it={it} />)}
+          {list.map((it) => <IdeaCard key={it.id} it={it} view={view} />)}
         </div>
       )}
     </AppShell>

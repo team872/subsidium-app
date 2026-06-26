@@ -40,7 +40,13 @@ export default function IdeaDetailPage() {
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [backHref, setBackHref] = useState("/idees");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("vue");
+    if (v === "liste" || v === "carte") setBackHref(`/idees?vue=${v}`);
+  }, []);
 
   useEffect(() => {
     fetch(`/app/api/ideas/${id}`)
@@ -115,7 +121,7 @@ export default function IdeaDetailPage() {
   if (loading) {
     return (
       <AppShell>
-        <Link href="/idees" className="board-back">← Toutes les idées</Link>
+        <Link href={backHref} className="board-back">← Toutes les idées</Link>
         <p className="board-empty">Chargement…</p>
       </AppShell>
     );
@@ -124,7 +130,7 @@ export default function IdeaDetailPage() {
   if (!idea) {
     return (
       <AppShell>
-        <Link href="/idees" className="board-back">← Toutes les idées</Link>
+        <Link href={backHref} className="board-back">← Toutes les idées</Link>
         <p className="board-empty">Cette idée est introuvable.</p>
       </AppShell>
     );
@@ -132,7 +138,7 @@ export default function IdeaDetailPage() {
 
   return (
     <AppShell>
-      <Link href="/idees" className="board-back">
+      <Link href={backHref} className="board-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>
         Toutes les idées
       </Link>
