@@ -4,7 +4,7 @@ import { query, ensureDb } from "./db";
 // partenaires, accompagnement, communication) qui aident les porteurs à passer à l'action.
 // Table + seed auto-contenus (même pattern que projetsData / orgData).
 
-export type ResourceDTO = { id: number; category: string; title: string; desc: string; provider: string; link: string | null; grad: string };
+export type ResourceDTO = { id: number; category: string; title: string; desc: string; provider: string; link: string | null; grad: string; image: string | null };
 
 export const ENERGIE_CATEGORIES = ["Financement", "Formation", "Outils & méthodes", "Partenaires", "Accompagnement", "Communication"];
 
@@ -40,6 +40,7 @@ async function init() {
       created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await query(`ALTER TABLE energie_ressources ADD COLUMN IF NOT EXISTS image TEXT`);
   const c = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM energie_ressources`);
   if (c[0].n === 0) {
     for (let i = 0; i < SEED.length; i++) {
@@ -52,6 +53,6 @@ async function init() {
 
 export async function listResources(): Promise<ResourceDTO[]> {
   await ensureEnergie();
-  const rows = await query<any>(`SELECT id,category,title,descr AS "desc",provider,link,grad FROM energie_ressources ORDER BY id ASC`);
-  return rows.map((r) => ({ id: r.id, category: r.category || "", title: r.title, desc: r.desc || "", provider: r.provider || "", link: r.link || null, grad: r.grad }));
+  const rows = await query<any>(`SELECT id,category,title,descr AS "desc",provider,link,grad,image FROM energie_ressources ORDER BY id ASC`);
+  return rows.map((r) => ({ id: r.id, category: r.category || "", title: r.title, desc: r.desc || "", provider: r.provider || "", link: r.link || null, grad: r.grad, image: r.image ?? null }));
 }

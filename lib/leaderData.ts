@@ -9,7 +9,7 @@ export type LeaderRessource = { label: string; href?: string };
 export type LeaderStep = { key: string; titre: string; contenu: string; lecons?: LeaderLecon[]; points_cles?: string[]; ressources?: LeaderRessource[] };
 export type CertStatut = "en_attente" | "certifie" | "refuse";
 export type CertRequest = { id: number; user_id: number; nom: string; prenom: string; email: string; niveau: number; created_at: string };
-export type ClubDTO = { id: number; name: string; theme: string | null; descr: string; owner_id: number | null; members: number; grad: string };
+export type ClubDTO = { id: number; name: string; theme: string | null; descr: string; owner_id: number | null; members: number; grad: string; image: string | null };
 export type ClubMember = { nom: string; prenom: string; role: string };
 export type ClubPost = { id: number; corps: string; auteur: string; created_at: string };
 
@@ -97,6 +97,10 @@ async function init(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT now(),
       decided_at TIMESTAMPTZ
     );
+    CREATE TABLE IF NOT EXISTS leader_step_images (
+      step_key TEXT PRIMARY KEY,
+      image TEXT
+    );
     CREATE TABLE IF NOT EXISTS clubs (
       id SERIAL PRIMARY KEY, name TEXT NOT NULL, theme TEXT, descr TEXT,
       owner_id INT REFERENCES users(id) ON DELETE SET NULL,
@@ -117,6 +121,7 @@ async function init(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await query(`ALTER TABLE clubs ADD COLUMN IF NOT EXISTS image TEXT`);
 }
 
 // --- Parcours de formation ---
@@ -126,6 +131,13 @@ export async function listProgress(userId: number): Promise<string[]> {
   const rows = await query<{ step_key: string }>(`SELECT step_key FROM leader_progress WHERE user_id=$1`, [userId]);
   const valid = new Set(LEADER_STEPS.map((s) => s.key));
   return rows.map((r) => r.step_key).filter((k) => valid.has(k));
+}
+export async function getStepImages(): Promise<Record<string, string>> {
+  await ensureLeader();
+  const rows = await query<{ step_key: string; image: string }>(`SELECT step_key, image FROM leader_step_images WHERE image IS NOT NULL`);
+  const m: Record<string, string> = {};
+  for (const r of rows) m[r.step_key] = r.image;
+  return m;
 }
 export async function toggleStep(userId: number, key: string, done: boolean): Promise<void> {
   await ensureLeader();
@@ -170,27 +182,27 @@ export async function decideCertification(certId: number, approve: boolean): Pro
 // --- Clubs ---
 
 function mapClub(r: any): ClubDTO {
-  return { id: r.id, name: r.name, theme: r.theme, descr: r.descr || "", owner_id: r.owner_id, members: r.members ?? 0, grad: GRADS[(r.id - 1) % GRADS.length] };
+  return { id: r.id, name: r.name, theme: r.theme, descr: r.descr || "", owner_id: r.owner_id, members: r.members ?? 0, grad: GRADS[(r.id - 1) % GRADS.length], image: r.image ?? null };
 }
 export async function listClubs(): Promise<ClubDTO[]> {
   await ensureLeader();
   const rows = await query<any>(
-    `SELECT id,name,theme,descr,owner_id,(SELECT COUNT(*)::int FROM club_members m WHERE m.club_id=clubs.id) AS members FROM clubs ORDER BY id DESC`
+    `SELECT id,name,theme,descr,owner_id,image,(SELECT COUNT(*)::int FROM club_members m WHERE m.club_id=clubs.id) AS members FROM clubs ORDER BY id DESC`
   );
   return rows.map(mapClub);
 }
 export async function getClub(id: number): Promise<ClubDTO | null> {
   await ensureLeader();
   const rows = await query<any>(
-    `SELECT id,name,theme,descr,owner_id,(SELECT COUNT(*)::int FROM club_members m WHERE m.club_id=clubs.id) AS members FROM clubs WHERE id=$1`, [id]
+    `SELECT id,name,theme,descr,owner_id,image,(SELECT COUNT(*)::int FROM club_members m WHERE m.club_id=clubs.id) AS members FROM clubs WHERE id=$1`, [id]
   );
   return rows[0] ? mapClub(rows[0]) : null;
 }
-export async function createClub(ownerId: number, f: { name: string; theme?: string; descr?: string }): Promise<number> {
+export async function createClub(ownerId: number, f: { name: string; theme?: string; descr?: string; image?: string | null }): Promise<number> {
   await ensureLeader();
   const rows = await query<{ id: number }>(
-    `INSERT INTO clubs (name,theme,descr,owner_id) VALUES ($1,$2,$3,$4) RETURNING id`,
-    [f.name, f.theme || null, f.descr || null, ownerId]
+    `INSERT INTO clubs (name,theme,descr,owner_id,image) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    [f.name, f.theme || null, f.descr || null, ownerId, f.image || null]
   );
   const id = rows[0].id;
   await query(`INSERT INTO club_members (club_id,user_id,role) VALUES ($1,$2,'owner') ON CONFLICT DO NOTHING`, [id, ownerId]);
