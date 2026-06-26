@@ -7,9 +7,9 @@ type Photo = { id: number; thumb: string; full: string; alt: string; credit: str
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
-  fr: { ph: "Mots-clés (pré-remplis depuis votre texte)", search: "Rechercher", gen: "✨ Générer (IA)", genBusy: "Génération…", searching: "Recherche…", none: "Aucune image. Essayez d'autres mots-clés.", noKey: "Recherche d'images indisponible (clé Pexels non configurée).", genOff: "Génération IA non configurée (clé Together requise).", remove: "Retirer", hint: "Choisissez une photo libre de droit ou générez une illustration." },
-  en: { ph: "Keywords (prefilled from your text)", search: "Search", gen: "✨ Generate (AI)", genBusy: "Generating…", searching: "Searching…", none: "No image. Try other keywords.", noKey: "Image search unavailable (Pexels key not configured).", genOff: "AI generation not configured (Together key required).", remove: "Remove", hint: "Pick a royalty-free photo or generate an illustration." },
-  it: { ph: "Parole chiave (precompilate dal testo)", search: "Cerca", gen: "✨ Genera (IA)", genBusy: "Generazione…", searching: "Ricerca…", none: "Nessuna immagine. Prova altre parole chiave.", noKey: "Ricerca immagini non disponibile (chiave Pexels non configurata).", genOff: "Generazione IA non configurata (chiave Together richiesta).", remove: "Rimuovi", hint: "Scegli una foto royalty-free o genera un'illustrazione." },
+  fr: { ph: "Mots-clés (pré-remplis depuis votre texte)", search: "Rechercher", gen: "✨ Générer (IA)", genBusy: "Génération…", searching: "Recherche…", none: "Aucune image. Essayez d'autres mots-clés.", noKey: "Recherche d'images indisponible (clé Pexels non configurée).", genOff: "Génération IA non configurée (clé fal.ai requise).", remove: "Retirer", hint: "Choisissez une photo libre de droit ou générez une illustration." },
+  en: { ph: "Keywords (prefilled from your text)", search: "Search", gen: "✨ Generate (AI)", genBusy: "Generating…", searching: "Searching…", none: "No image. Try other keywords.", noKey: "Image search unavailable (Pexels key not configured).", genOff: "AI generation not configured (fal.ai key required).", remove: "Remove", hint: "Pick a royalty-free photo or generate an illustration." },
+  it: { ph: "Parole chiave (precompilate dal testo)", search: "Cerca", gen: "✨ Genera (IA)", genBusy: "Generazione…", searching: "Ricerca…", none: "Nessuna immagine. Prova altre parole chiave.", noKey: "Ricerca immagini non disponibile (chiave Pexels non configurata).", genOff: "Generazione IA non configurata (chiave fal.ai richiesta).", remove: "Rimuovi", hint: "Scegli una foto royalty-free o genera un'illustrazione." },
 };
 
 export default function ImagePicker({ seed, value, onPick }: { seed: string; value: string | null; onPick: (url: string | null) => void }) {
@@ -55,7 +55,7 @@ export default function ImagePicker({ seed, value, onPick }: { seed: string; val
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
           style={{ flex: "1 1 200px", border: "1px solid #E3D7CC", borderRadius: 10, padding: "9px 12px", color: "#372646" }} />
         <button type="button" className="btn btn-ghost" onClick={search} disabled={loading}>{loading ? tr.searching : tr.search}</button>
-        <button type="button" className="btn btn-ghost" onClick={generate} disabled={genBusy} title="FLUX">{genBusy ? tr.genBusy : tr.gen}</button>
+        <button type="button" className="btn btn-ghost" onClick={generate} disabled={genBusy} title="FLUX · fal.ai">{genBusy ? tr.genBusy : tr.gen}</button>
       </div>
 
       {value && (

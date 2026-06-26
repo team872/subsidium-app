@@ -9,7 +9,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - TEST_ACCOUNTS=${TEST_ACCOUNTS}
       - PEXELS_API_KEY=${PEXELS_API_KEY}
-      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      - FAL_KEY=${FAL_KEY}
     networks:
       - traefik
     labels:

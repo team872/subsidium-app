@@ -30,7 +30,7 @@ function IdeaCard({ it }: { it: IdeaDTO }) {
   return (
     <Link href={`/idees/${it.id}`} className="icard">
       {it.image ? (
-        <div style={{ height: 120, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.45)), url("${it.image}")`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
+        <div style={{ height: 120, flexShrink: 0, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.45)), url("${it.image}")`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
           <span style={{ position: "absolute", left: 12, top: 12, background: it.color, color: "#fff", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", padding: "3px 10px", borderRadius: 999 }}>{it.cat}</span>
         </div>
       ) : (
