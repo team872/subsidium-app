@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const title = (b.title || "").trim();
   if (!title) return NextResponse.json({ error: "Le titre du projet est requis." }, { status: 400 });
   try {
-    const id = await createProjet(uid, { title, theme: (b.theme || "").trim(), desc: (b.desc || "").trim(), lieu: (b.lieu || "").trim(), prive: !!b.prive });
+    const id = await createProjet(uid, { title, theme: (b.theme || "").trim(), desc: (b.desc || "").trim(), lieu: (b.lieu || "").trim(), prive: !!b.prive, image: b.image ? String(b.image).trim() || null : null });
     return NextResponse.json({ ok: true, id });
   } catch {
     return NextResponse.json({ error: "Création impossible." }, { status: 500 });

@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       telephone: String(b.telephone || "").trim(),
       email: String(b.email || "").trim(),
       site: String(b.site || "").trim(),
+      image: b.image ? String(b.image).trim() || null : null,
     });
     return NextResponse.json({ ok: true, id });
   } catch {

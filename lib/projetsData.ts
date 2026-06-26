@@ -6,7 +6,7 @@ import { query } from "./db";
 
 export type ProjetDTO = {
   id: number; title: string; theme: string | null; desc: string; lieu: string | null;
-  prive: boolean; owner_id: number | null; membres: number; grad: string;
+  prive: boolean; owner_id: number | null; membres: number; grad: string; image: string | null;
 };
 export type CandStatut = "en_attente" | "acceptee" | "refusee";
 export type ProjetCandidature = { id: number; nom: string; prenom: string; email: string; presentation: string; statut: CandStatut; created_at: string };
@@ -64,6 +64,7 @@ async function init(): Promise<void> {
       corps TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await query(`ALTER TABLE projets ADD COLUMN IF NOT EXISTS image TEXT`);
   const c = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM projets`);
   if (c[0].n === 0) {
     for (const p of SEED) {
@@ -73,9 +74,9 @@ async function init(): Promise<void> {
 }
 
 function mapProjet(r: any): ProjetDTO {
-  return { id: r.id, title: r.title, theme: r.theme, desc: r.desc || "", lieu: r.lieu, prive: !!r.prive, owner_id: r.owner_id, membres: r.membres ?? 0, grad: GRADS[(r.id - 1) % GRADS.length] };
+  return { id: r.id, title: r.title, theme: r.theme, desc: r.desc || "", lieu: r.lieu, prive: !!r.prive, owner_id: r.owner_id, membres: r.membres ?? 0, grad: GRADS[(r.id - 1) % GRADS.length], image: r.image ?? null };
 }
-const COLS = `id,title,theme,descr AS "desc",lieu,prive,owner_id,(SELECT COUNT(*)::int FROM projet_membres m WHERE m.projet_id=projets.id) AS membres`;
+const COLS = `id,title,theme,descr AS "desc",lieu,prive,owner_id,image,(SELECT COUNT(*)::int FROM projet_membres m WHERE m.projet_id=projets.id) AS membres`;
 
 export async function listProjets(filter: string, userId: number | null): Promise<ProjetDTO[]> {
   await ensureProjets();
@@ -88,7 +89,6 @@ export async function listProjets(filter: string, userId: number | null): Promis
     const rows = await query<any>(`SELECT ${COLS} FROM projets WHERE owner_id=$1 ORDER BY id DESC`, [userId]);
     return rows.map(mapProjet);
   }
-  // tous : projets publics + (privés où je suis lié)
   const rows = await query<any>(
     `SELECT ${COLS} FROM projets WHERE prive = FALSE${userId ? " OR id IN (SELECT projet_id FROM projet_membres WHERE user_id=$1)" : ""} ORDER BY id DESC`,
     userId ? [userId] : []);
@@ -99,11 +99,11 @@ export async function getProjet(id: number): Promise<ProjetDTO | null> {
   const rows = await query<any>(`SELECT ${COLS} FROM projets WHERE id=$1`, [id]);
   return rows[0] ? mapProjet(rows[0]) : null;
 }
-export async function createProjet(ownerId: number, f: { title: string; theme?: string; desc?: string; lieu?: string; prive?: boolean }): Promise<number> {
+export async function createProjet(ownerId: number, f: { title: string; theme?: string; desc?: string; lieu?: string; prive?: boolean; image?: string | null }): Promise<number> {
   await ensureProjets();
   const rows = await query<{ id: number }>(
-    `INSERT INTO projets (title,theme,descr,lieu,prive,owner_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-    [f.title, f.theme || null, f.desc || null, f.lieu || null, !!f.prive, ownerId]);
+    `INSERT INTO projets (title,theme,descr,lieu,prive,owner_id,image) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [f.title, f.theme || null, f.desc || null, f.lieu || null, !!f.prive, ownerId, f.image || null]);
   const id = rows[0].id;
   await query(`INSERT INTO projet_membres (projet_id,user_id,role) VALUES ($1,$2,'owner') ON CONFLICT DO NOTHING`, [id, ownerId]);
   return id;
