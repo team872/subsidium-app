@@ -8,7 +8,7 @@ import { useNiveau } from "@/components/useNiveau";
 import { peutPorterInitiative, prochaineEtape } from "@/lib/niveau";
 import "@/components/MemberBoards.css";
 
-type Offre = { id: number; title: string; provider: string; desc: string; price: string; grad: string };
+type Offre = { id: number; title: string; provider: string; desc: string; price: string; grad: string; image: string | null };
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
@@ -45,6 +45,14 @@ const DICT: Record<string, Dict> = {
 };
 
 const pricePill: React.CSSProperties = { background: "#FBE7DC", color: "#C2452F", fontWeight: 700, borderRadius: 999, padding: "7px 16px", display: "inline-block", fontSize: 14 };
+
+function headerStyle(grad: string, image: string | null, h: number, rounded = false): React.CSSProperties {
+  const base: React.CSSProperties = { height: h, ...(rounded ? { borderTopLeftRadius: 22, borderTopRightRadius: 22 } : {}) };
+  if (image) {
+    return { ...base, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.08), rgba(40,28,52,.42)), url("${image}")`, backgroundSize: "cover", backgroundPosition: "center" };
+  }
+  return { ...base, background: grad };
+}
 
 export default function MarchePage() {
   const { lang } = useLang();
@@ -105,7 +113,7 @@ export default function MarchePage() {
         <div className="idees-grid">
           {offres.map((o) => (
             <div key={o.id} className="icard" role="button" tabIndex={0} onClick={() => openOffre(o)} style={{ cursor: "pointer" }}>
-              <div style={{ height: 120, background: o.grad }} />
+              <div style={headerStyle(o.grad, o.image, 120)} />
               <div className="bd">
                 <h3>{o.title}</h3>
                 <p>{o.desc}</p>
@@ -119,7 +127,7 @@ export default function MarchePage() {
       {sel && (
         <div className="modal-overlay" onClick={close}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ height: 150, background: sel.grad, borderTopLeftRadius: 22, borderTopRightRadius: 22, position: "relative" }}>
+            <div style={{ ...headerStyle(sel.grad, sel.image, 150, true), position: "relative" }}>
               <button className="modal-x" onClick={close} aria-label={tr.close} style={{ position: "absolute", top: 14, right: 16 }}>×</button>
             </div>
             <div className="modal-body">

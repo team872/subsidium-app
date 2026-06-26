@@ -50,6 +50,9 @@ const DICT: Record<string, Dict> = {
 
 const TYPES = ["Bénévolat", "CDI", "CDD"];
 function typeLabel(t: string, tr: Dict) { return t === "Bénévolat" ? tr.typeVol : t; }
+function orgInitials(n: string) {
+  return (n || "").replace(/[^A-Za-zÀ-ſ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "O";
+}
 
 const STATUT_COLOR: Record<string, { bg: string; fg: string }> = {
   acceptee: { bg: "#DBF0D9", fg: "#1E6B1E" },
@@ -72,8 +75,11 @@ function Card({ m, statut }: { m: Mission; statut?: string }) {
         <h3 style={clamp2}>{m.title}</h3>
         <p style={clamp3}>{m.desc}</p>
         <div className="foot">
-          <span className="auth">{tr.by} {m.org}</span>
-          <span>{m.date}</span>
+          <span className="auth" style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+            <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: "50%", background: m.color, color: "#fff", fontSize: 9.5, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{orgInitials(m.org)}</span>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tr.by} {m.org}</span>
+          </span>
+          <span style={{ flexShrink: 0 }}>{m.date}</span>
         </div>
         {statut && (
           <div style={{ marginTop: 10 }}>
