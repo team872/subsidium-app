@@ -101,7 +101,8 @@ export default function CharteChat({ onFallback }: { onFallback?: () => void }) 
       });
       const d = await r.json().catch(() => ({} as any));
       const reply: string = (d.reply ?? "").toString();
-      if (!r.ok || d.fallback || isAgentError(reply) || isAgentError((d.error ?? "").toString())) {
+      const errStr: string = (d.error ?? "").toString();
+      if (!r.ok || d.fallback === true || isAgentError(reply) || (errStr.trim() !== "" && isAgentError(errStr))) {
         setError(tr.agentBusy);
         const hadAgentReply = next.some((m, i) => i > 0 && m.role === "assistant");
         if (!hadAgentReply) { setStarted(false); setHistory([]); }

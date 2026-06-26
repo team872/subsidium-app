@@ -19,6 +19,9 @@ const API = "/app/api/eval";
 const TARGET_QUESTIONS = 20;
 const OPENER = "Bonjour, je suis prêt(e) à commencer l'entretien.";
 
+// Vrai si la chaîne ressemble à une erreur d'infrastructure / fournisseur. Ne PAS appeler
+// sur une chaîne vide attendue (ex. d.error absent sur un succès) : ici une chaîne vide
+// = pas de contenu = traité comme erreur uniquement pour la RÉPONSE de l'agent.
 function isAgentError(s?: string): boolean {
   if (!s || !s.trim()) return true;
   return /(^\s*OpenRouter|"error"\s*:|"code"\s*:\s*\d|rate.?limit|temporarily|provider returned|unavailable|<\/?html|bad gateway|gateway time|quota|exhausted|too many requests|\b429\b|\b50[023]\b)/i.test(s);
@@ -101,7 +104,9 @@ export default function AutoEvalChat({ onResult, onFallback }: { onResult: (s: E
       });
       const d = await r.json().catch(() => ({} as any));
       const reply: string = (d.reply ?? "").toString();
-      if (!r.ok || d.fallback || isAgentError(reply) || isAgentError((d.error ?? "").toString())) {
+      const errStr: string = (d.error ?? "").toString();
+      // Erreur si : statut non-OK, fallback explicite, réponse vide/erronée, ou message d'erreur présent.
+      if (!r.ok || d.fallback === true || isAgentError(reply) || (errStr.trim() !== "" && isAgentError(errStr))) {
         setError(tr.agentBusy);
         const hadAgentReply = next.some((m, i) => i > 0 && m.role === "assistant");
         if (!hadAgentReply) { setStarted(false); setHistory([]); }
