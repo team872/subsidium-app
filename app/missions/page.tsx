@@ -57,6 +57,10 @@ const STATUT_COLOR: Record<string, { bg: string; fg: string }> = {
   en_attente: { bg: "#ECE6F0", fg: "#5E4A73" },
 };
 
+// Cartes à hauteur uniforme : titre 2 lignes max, description tronquée à 3 lignes.
+const clamp2: React.CSSProperties = { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", minHeight: "2.6em" };
+const clamp3: React.CSSProperties = { display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", flex: "none", height: "4.5em", margin: 0 };
+
 function Card({ m, statut }: { m: Mission; statut?: string }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
@@ -65,8 +69,8 @@ function Card({ m, statut }: { m: Mission; statut?: string }) {
     <Link href={`/missions/${m.id}`} className="icard" key={m.id}>
       <div className="band" style={{ background: m.color }}><span>{typeLabel(m.type, tr)}</span></div>
       <div className="bd">
-        <h3>{m.title}</h3>
-        <p>{m.desc}</p>
+        <h3 style={clamp2}>{m.title}</h3>
+        <p style={clamp3}>{m.desc}</p>
         <div className="foot">
           <span className="auth">{tr.by} {m.org}</span>
           <span>{m.date}</span>
