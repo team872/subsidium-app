@@ -2,8 +2,9 @@ import { query, ensureDb } from "./db";
 import { keywordsFromText } from "./keywords";
 import { ensureProjets } from "./projetsData";
 import { ensureOrg } from "./orgData";
+import { ensureMarket } from "./marketData";
 
-// Visuels des cartes : colonne `image` (URL) sur events/ideas/projets/organisations + recherche
+// Visuels des cartes : colonne `image` (URL) sur events/ideas/projets/organisations/offres + recherche
 // d'images libres de droit (Pexels) activée dès que PEXELS_API_KEY est défini côté serveur.
 // Génération d'illustration IA (FLUX via fal.ai) activée dès que FAL_KEY est défini.
 // Tant que les clés sont absentes, l'app retombe proprement sur le dégradé de marque.
@@ -139,6 +140,19 @@ export async function autoIllustrateOrgs(): Promise<number> {
     const kw = keywordsFromText(r.name, r.type || "") || "nonprofit organization";
     const photos = await pexelsSearch(`${kw} association community`, 6);
     if (photos.length) { await query(`UPDATE organisations SET image=$2 WHERE id=$1`, [r.id, photos[r.id % photos.length].full]); n++; }
+  }
+  return n;
+}
+export async function autoIllustrateOffres(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureMarket();
+  await query(`ALTER TABLE offres ADD COLUMN IF NOT EXISTS image TEXT`);
+  const rows = await query<{ id: number; title: string; descr: string | null }>(`SELECT id, title, descr FROM offres WHERE image IS NULL ORDER BY id`);
+  let n = 0;
+  for (const r of rows) {
+    const kw = keywordsFromText(r.title, r.descr || "") || r.title;
+    const photos = await pexelsSearch(`${kw} workshop coaching service`, 6);
+    if (photos.length) { await query(`UPDATE offres SET image=$2 WHERE id=$1`, [r.id, photos[r.id % photos.length].full]); n++; }
   }
   return n;
 }
