@@ -3,11 +3,12 @@ import { keywordsFromText } from "./keywords";
 import { ensureProjets } from "./projetsData";
 import { ensureOrg } from "./orgData";
 import { ensureMarket } from "./marketData";
+import { ensureEnergie } from "./energieData";
+import { ensureLeader, LEADER_STEPS } from "./leaderData";
 
-// Visuels des cartes : colonne `image` (URL) sur events/ideas/projets/organisations/offres + recherche
-// d'images libres de droit (Pexels) activée dès que PEXELS_API_KEY est défini côté serveur.
-// Génération d'illustration IA (FLUX via fal.ai) activée dès que FAL_KEY est défini.
-// Tant que les clés sont absentes, l'app retombe proprement sur le dégradé de marque.
+// Visuels des cartes : colonne `image` (URL) sur events/ideas/projets/organisations/offres/
+// energie/clubs (+ leader_step_images). Recherche Pexels (PEXELS_API_KEY) + génération IA FLUX
+// via fal.ai (FAL_KEY). Sans clé, repli propre sur le dégradé de marque.
 
 let ready: Promise<void> | null = null;
 export function ensureImageCols(): Promise<void> {
@@ -84,7 +85,6 @@ export async function setIdeaImage(id: number, url: string | null): Promise<void
   await query(`UPDATE ideas SET image=$2 WHERE id=$1`, [id, url]);
 }
 
-// Requête Pexels par type d'événement (en anglais : meilleurs résultats civiques).
 const TAG_QUERY: Record<string, string> = {
   "Nouveauté": "city community announcement",
   "Concertation": "town hall meeting citizens",
@@ -92,6 +92,21 @@ const TAG_QUERY: Record<string, string> = {
   "Atelier": "community workshop participatory",
   "Rencontre": "community gathering café",
   "Récit": "volunteers community project",
+};
+const ENERGIE_QUERY: Record<string, string> = {
+  "Financement": "funding grant finance",
+  "Formation": "training workshop classroom",
+  "Outils & méthodes": "planning toolbox desk",
+  "Partenaires": "business partnership handshake",
+  "Accompagnement": "mentoring coaching meeting",
+  "Communication": "communication marketing design",
+};
+const STEP_QUERY: Record<string, string> = {
+  comprendre: "local democracy citizens decision",
+  ethique: "trust integrity values handshake",
+  animer: "facilitator group workshop discussion",
+  piloter: "project management team planning",
+  transmettre: "mentoring teaching knowledge sharing",
 };
 
 export async function autoIllustrateEvents(): Promise<number> {
@@ -153,6 +168,45 @@ export async function autoIllustrateOffres(): Promise<number> {
     const kw = keywordsFromText(r.title, r.descr || "") || r.title;
     const photos = await pexelsSearch(`${kw} workshop coaching service`, 6);
     if (photos.length) { await query(`UPDATE offres SET image=$2 WHERE id=$1`, [r.id, photos[r.id % photos.length].full]); n++; }
+  }
+  return n;
+}
+export async function autoIllustrateEnergie(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureEnergie();
+  await query(`ALTER TABLE energie_ressources ADD COLUMN IF NOT EXISTS image TEXT`);
+  const rows = await query<{ id: number; category: string | null; title: string }>(`SELECT id, category, title FROM energie_ressources WHERE image IS NULL ORDER BY id`);
+  let n = 0;
+  for (const r of rows) {
+    const q = ENERGIE_QUERY[r.category || ""] || keywordsFromText(r.title, "") || "community support";
+    const photos = await pexelsSearch(q, 6);
+    if (photos.length) { await query(`UPDATE energie_ressources SET image=$2 WHERE id=$1`, [r.id, photos[r.id % photos.length].full]); n++; }
+  }
+  return n;
+}
+export async function autoIllustrateClubs(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureLeader();
+  await query(`ALTER TABLE clubs ADD COLUMN IF NOT EXISTS image TEXT`);
+  const rows = await query<{ id: number; name: string; theme: string | null }>(`SELECT id, name, theme FROM clubs WHERE image IS NULL ORDER BY id`);
+  let n = 0;
+  for (const r of rows) {
+    const kw = keywordsFromText(r.name, r.theme || "") || (r.theme || "community club");
+    const photos = await pexelsSearch(`${kw} community group`, 6);
+    if (photos.length) { await query(`UPDATE clubs SET image=$2 WHERE id=$1`, [r.id, photos[r.id % photos.length].full]); n++; }
+  }
+  return n;
+}
+export async function autoIllustrateLeaderSteps(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureLeader();
+  let n = 0;
+  for (const s of LEADER_STEPS) {
+    const ex = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM leader_step_images WHERE step_key=$1 AND image IS NOT NULL`, [s.key]);
+    if (ex[0].n > 0) continue;
+    const q = STEP_QUERY[s.key] || s.titre;
+    const photos = await pexelsSearch(q, 6);
+    if (photos.length) { await query(`INSERT INTO leader_step_images (step_key,image) VALUES ($1,$2) ON CONFLICT (step_key) DO UPDATE SET image=EXCLUDED.image`, [s.key, photos[0].full]); n++; }
   }
   return n;
 }

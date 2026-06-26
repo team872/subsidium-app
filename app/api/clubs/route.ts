@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const name = (b.name || "").trim();
   if (!name) return NextResponse.json({ error: "Le nom du club est requis." }, { status: 400 });
   try {
-    const id = await createClub(uid, { name, theme: (b.theme || "").trim(), descr: (b.descr || "").trim() });
+    const id = await createClub(uid, { name, theme: (b.theme || "").trim(), descr: (b.descr || "").trim(), image: b.image ? String(b.image).trim() || null : null });
     return NextResponse.json({ ok: true, id });
   } catch {
     return NextResponse.json({ error: "Création impossible." }, { status: 500 });
