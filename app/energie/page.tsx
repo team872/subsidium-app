@@ -8,7 +8,7 @@ import { useNiveau } from "@/components/useNiveau";
 import { peutPorterInitiative, prochaineEtape } from "@/lib/niveau";
 import "@/components/MemberBoards.css";
 
-type Resource = { id: number; category: string; title: string; desc: string; provider: string; link: string | null; grad: string };
+type Resource = { id: number; category: string; title: string; desc: string; provider: string; link: string | null; grad: string; image: string | null };
 type Dict = Record<string, string>;
 
 const CATS = ["Financement", "Formation", "Outils & méthodes", "Partenaires", "Accompagnement", "Communication"];
@@ -44,6 +44,12 @@ const DICT: Record<string, Dict> = {
   },
 };
 function catLabel(c: string, tr: Dict) { return tr[CAT_KEY[c]] || c; }
+
+function headerStyle(grad: string, image: string | null, h: number, rounded = false): React.CSSProperties {
+  const base: React.CSSProperties = { height: h, ...(rounded ? { borderTopLeftRadius: 22, borderTopRightRadius: 22 } : {}) };
+  if (image) return { ...base, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.42)), url(\"${image}\")`, backgroundSize: "cover", backgroundPosition: "center" };
+  return { ...base, background: grad };
+}
 
 export default function EnergiePage() {
   const { lang } = useLang();
@@ -98,7 +104,7 @@ export default function EnergiePage() {
         <div className="idees-grid">
           {list.map((r) => (
             <div key={r.id} className="icard" role="button" tabIndex={0} onClick={() => setSel(r)} style={{ cursor: "pointer" }}>
-              <div style={{ height: 84, background: r.grad }} />
+              <div style={headerStyle(r.grad, r.image, 84)} />
               <div className="bd">
                 <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{catLabel(r.category, tr)}</span>
                 <h3 style={{ marginTop: 4 }}>{r.title}</h3>
@@ -112,7 +118,7 @@ export default function EnergiePage() {
       {sel && (
         <div className="modal-overlay" onClick={() => setSel(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ height: 130, background: sel.grad, borderTopLeftRadius: 22, borderTopRightRadius: 22, position: "relative" }}>
+            <div style={{ ...headerStyle(sel.grad, sel.image, 130, true), position: "relative" }}>
               <button className="modal-x" onClick={() => setSel(null)} aria-label={tr.close} style={{ position: "absolute", top: 14, right: 16 }}>×</button>
             </div>
             <div className="modal-body">

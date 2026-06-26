@@ -8,7 +8,7 @@ import "@/components/MemberBoards.css";
 
 type Lecon = { titre: string; corps: string };
 type Ressource = { label: string; href?: string };
-type Step = { key: string; titre: string; contenu: string; lecons?: Lecon[]; points_cles?: string[]; ressources?: Ressource[] };
+type Step = { key: string; titre: string; contenu: string; lecons?: Lecon[]; points_cles?: string[]; ressources?: Ressource[]; image?: string | null };
 type Cert = { statut: "en_attente" | "certifie" | "refuse" } | null;
 type Dict = Record<string, string>;
 
@@ -120,17 +120,20 @@ export default function LeaderPage() {
             {steps.map((s, i) => {
               const isDone = done.includes(s.key);
               return (
-                <div key={s.key} style={{ border: "1px solid #EBD9CD", borderRadius: 14, padding: "14px 16px", background: isDone ? "#FCFBF8" : "#fff", display: "flex", gap: 14 }}>
-                  <button onClick={() => toggle(s.key, isDone)} aria-label={isDone ? tr.markUndone : tr.markDone} style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: isDone ? "none" : "2px solid #E3D7CC", background: isDone ? "#5E8A57" : "#fff", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
-                    {isDone && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}
-                  </button>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: "#9C919E", textTransform: "uppercase", letterSpacing: ".03em" }}>{tr.step} {i + 1}</div>
-                    <h3 style={{ margin: "2px 0 6px", color: "#372646" }}>{s.titre}</h3>
-                    <p style={{ color: "#5E4A73", fontSize: 14, margin: 0, lineHeight: 1.55 }}>{s.contenu}</p>
-                    {(s.lecons?.length || s.points_cles?.length || s.ressources?.length) ? (
-                      <button type="button" className="btn btn-ghost" style={{ marginTop: 10, padding: "5px 12px", fontSize: 13 }} onClick={() => setOpenStep(s)}>{tr.module}</button>
-                    ) : null}
+                <div key={s.key} style={{ border: "1px solid #EBD9CD", borderRadius: 14, overflow: "hidden", background: isDone ? "#FCFBF8" : "#fff", display: "flex", gap: 0 }}>
+                  {s.image && <div style={{ flexShrink: 0, width: 120, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.35)), url(\"${s.image}\")`, backgroundSize: "cover", backgroundPosition: "center" }} />}
+                  <div style={{ display: "flex", gap: 14, padding: "14px 16px", flex: 1 }}>
+                    <button onClick={() => toggle(s.key, isDone)} aria-label={isDone ? tr.markUndone : tr.markDone} style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: isDone ? "none" : "2px solid #E3D7CC", background: isDone ? "#5E8A57" : "#fff", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
+                      {isDone && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}
+                    </button>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#9C919E", textTransform: "uppercase", letterSpacing: ".03em" }}>{tr.step} {i + 1}</div>
+                      <h3 style={{ margin: "2px 0 6px", color: "#372646" }}>{s.titre}</h3>
+                      <p style={{ color: "#5E4A73", fontSize: 14, margin: 0, lineHeight: 1.55 }}>{s.contenu}</p>
+                      {(s.lecons?.length || s.points_cles?.length || s.ressources?.length) ? (
+                        <button type="button" className="btn btn-ghost" style={{ marginTop: 10, padding: "5px 12px", fontSize: 13 }} onClick={() => setOpenStep(s)}>{tr.module}</button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               );
@@ -159,7 +162,14 @@ export default function LeaderPage() {
       {openStep && (
         <div className="modal-overlay" onClick={() => setOpenStep(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
-            <div className="modal-head"><h2>{openStep.titre}</h2><button className="modal-x" onClick={() => setOpenStep(null)} aria-label={tr.close}>×</button></div>
+            {openStep.image ? (
+              <div style={{ height: 170, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.15), rgba(40,28,52,.6)), url(\"${openStep.image}\")`, backgroundSize: "cover", backgroundPosition: "center", borderTopLeftRadius: 22, borderTopRightRadius: 22, position: "relative" }}>
+                <h2 style={{ position: "absolute", left: 22, bottom: 14, right: 56, color: "#fff", fontFamily: "var(--font-display),cursive", fontStyle: "italic", margin: 0, textShadow: "0 2px 10px rgba(0,0,0,.45)" }}>{openStep.titre}</h2>
+                <button className="modal-x" onClick={() => setOpenStep(null)} aria-label={tr.close} style={{ position: "absolute", top: 14, right: 16 }}>×</button>
+              </div>
+            ) : (
+              <div className="modal-head"><h2>{openStep.titre}</h2><button className="modal-x" onClick={() => setOpenStep(null)} aria-label={tr.close}>×</button></div>
+            )}
             <div className="modal-body">
               <p style={{ color: "#5E4A73", lineHeight: 1.6, margin: "0 0 14px" }}>{openStep.contenu}</p>
               {openStep.lecons?.map((l, i) => (

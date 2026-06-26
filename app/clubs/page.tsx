@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { useLang } from "@/components/LangProvider";
+import ImagePicker from "@/components/ImagePicker";
+import { keywordsFromText } from "@/lib/keywords";
 import "@/components/MemberBoards.css";
 
-type Club = { id: number; name: string; theme: string | null; descr: string; members: number; grad: string };
+type Club = { id: number; name: string; theme: string | null; descr: string; members: number; grad: string; image: string | null };
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
@@ -19,7 +21,7 @@ const DICT: Record<string, Dict> = {
     loading: "Chargement des clubs…", empty: "Aucun club pour le moment.",
     member: "membre", members: "membres",
     reqName: "Le nom du club est requis.", createErr: "Création impossible.", creating: "Création…", createBtn: "Créer",
-    fName: "Nom du club", fTheme: "Thème", fDesc: "Description",
+    fName: "Nom du club", fTheme: "Thème", fDesc: "Description", fImage: "Image",
     phTheme: "Ex. Transition écologique, Quartier…", phDesc: "Présentez l'objet du club…", close: "Fermer",
   },
   en: {
@@ -30,7 +32,7 @@ const DICT: Record<string, Dict> = {
     loading: "Loading clubs…", empty: "No club yet.",
     member: "member", members: "members",
     reqName: "The club name is required.", createErr: "Could not create.", creating: "Creating…", createBtn: "Create",
-    fName: "Club name", fTheme: "Theme", fDesc: "Description",
+    fName: "Club name", fTheme: "Theme", fDesc: "Description", fImage: "Image",
     phTheme: "E.g. Ecological transition, Neighbourhood…", phDesc: "Describe the club's purpose…", close: "Close",
   },
   it: {
@@ -41,13 +43,17 @@ const DICT: Record<string, Dict> = {
     loading: "Caricamento dei club…", empty: "Nessun club per ora.",
     member: "membro", members: "membri",
     reqName: "Il nome del club è obbligatorio.", createErr: "Creazione impossibile.", creating: "Creazione…", createBtn: "Crea",
-    fName: "Nome del club", fTheme: "Tema", fDesc: "Descrizione",
+    fName: "Nome del club", fTheme: "Tema", fDesc: "Descrizione", fImage: "Immagine",
     phTheme: "Es. Transizione ecologica, Quartiere…", phDesc: "Presenta lo scopo del club…", close: "Chiudi",
   },
 };
 
 function initials(n: string) {
   return n.replace(/[^A-Za-zÀ-ſ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "C";
+}
+function clubHeader(c: Club) {
+  if (c.image) return <div style={{ height: 96, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.4)), url(\"${c.image}\")`, backgroundSize: "cover", backgroundPosition: "center" }} />;
+  return <div style={{ height: 96, background: c.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(c.name)}</div>;
 }
 
 export default function ClubsPage() {
@@ -58,7 +64,7 @@ export default function ClubsPage() {
   const [loading, setLoading] = useState(true);
   const [niveau, setNiveau] = useState(0);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", theme: "", descr: "" });
+  const [form, setForm] = useState({ name: "", theme: "", descr: "", image: null as string | null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -97,7 +103,7 @@ export default function ClubsPage() {
         <div className="idees-grid">
           {clubs.map((c) => (
             <Link key={c.id} href={`/clubs/${c.id}`} className="icard">
-              <div style={{ height: 96, background: c.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(c.name)}</div>
+              {clubHeader(c)}
               <div className="bd">
                 {c.theme && <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{c.theme}</span>}
                 <h3 style={{ marginTop: 4 }}>{c.name}</h3>
@@ -116,6 +122,7 @@ export default function ClubsPage() {
               <div className="mfield"><label>{tr.fName}</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
               <div className="mfield"><label>{tr.fTheme}</label><input value={form.theme} onChange={(e) => setForm({ ...form, theme: e.target.value })} placeholder={tr.phTheme} /></div>
               <div className="mfield"><label>{tr.fDesc}</label><textarea value={form.descr} onChange={(e) => setForm({ ...form, descr: e.target.value })} placeholder={tr.phDesc} /></div>
+              <div className="mfield"><label>{tr.fImage}</label><ImagePicker seed={keywordsFromText(form.name, form.descr) || form.name.trim()} value={form.image} onPick={(u) => setForm({ ...form, image: u })} /></div>
               {error && <p className="msg">{error}</p>}
             </div>
             <div className="modal-foot"><button className="btn btn-coral" onClick={create} disabled={busy}>{busy ? tr.creating : tr.createBtn}</button></div>
