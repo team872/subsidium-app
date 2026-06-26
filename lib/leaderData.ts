@@ -77,6 +77,13 @@ const GRADS = [
   "linear-gradient(135deg,#E8C98F,#C8A248)", "linear-gradient(135deg,#8FC9C0,#4E8A80)",
 ];
 
+const SEED_CLUBS: { name: string; theme: string; descr: string }[] = [
+  { name: "Transition écologique Toulouse", theme: "Environnement", descr: "Un collectif de citoyens engagés pour accélérer la transition écologique à l'échelle du quartier : compostage partagé, énergie citoyenne, végétalisation. On se réunit chaque mois pour lancer des actions concrètes et s'entraider." },
+  { name: "Quartier solidaire du Mirail", theme: "Lien social", descr: "Tisser du lien entre voisins et briser l'isolement : repas partagés, entraide entre générations, accueil des nouveaux arrivants. Le club fédère les habitants autour de l'envie de faire quartier ensemble." },
+  { name: "Mobilités douces en Occitanie", theme: "Mobilité", descr: "Promouvoir le vélo, la marche et les alternatives à la voiture individuelle. Cartographie des points noirs, plaidoyer auprès des collectivités et organisation de balades pédagogiques ouvertes à tous." },
+  { name: "Démocratie locale & citoyenneté", theme: "Citoyenneté", descr: "Comprendre et faire vivre la démocratie au plus près du terrain : budgets participatifs, conseils de quartier, débats citoyens. Un espace pour apprendre à agir et à peser sur les décisions qui nous concernent." },
+];
+
 let ready: Promise<void> | null = null;
 export function ensureLeader(): Promise<void> {
   if (!ready) ready = init();
@@ -122,6 +129,21 @@ async function init(): Promise<void> {
     );
   `);
   await query(`ALTER TABLE clubs ADD COLUMN IF NOT EXISTS image TEXT`);
+  // Seed de clubs de démo (idempotent : seulement si aucun club).
+  const cc = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM clubs`);
+  if (cc[0].n === 0) {
+    const us = await query<{ id: number }>(`SELECT id FROM users ORDER BY id LIMIT 6`);
+    const ownerId = us[0]?.id ?? null;
+    for (let k = 0; k < SEED_CLUBS.length; k++) {
+      const s = SEED_CLUBS[k];
+      const r = await query<{ id: number }>(`INSERT INTO clubs (name,theme,descr,owner_id) VALUES ($1,$2,$3,$4) RETURNING id`, [s.name, s.theme, s.descr, ownerId]);
+      const cid = r[0].id;
+      const slice = us.slice(0, Math.min(us.length, 3 + k));
+      for (let i = 0; i < slice.length; i++) {
+        await query(`INSERT INTO club_members (club_id,user_id,role) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [cid, slice[i].id, i === 0 ? "owner" : "membre"]);
+      }
+    }
+  }
 }
 
 // --- Parcours de formation ---
