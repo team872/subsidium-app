@@ -70,11 +70,11 @@ function orgHeader(o: Org) {
   }
   return <div style={{ height: 96, flexShrink: 0, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 30, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</div>;
 }
-function OrgCard({ o }: { o: Org }) {
+function OrgCard({ o, view }: { o: Org; view: "liste" | "carte" }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
   return (
-    <Link href={`/organisations/${o.id}`} className="icard">
+    <Link href={`/organisations/${o.id}?vue=${view}`} className="icard">
       {orgHeader(o)}
       <div className="bd">
         <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{typeLabel(o.type, tr)}</span>
@@ -102,6 +102,17 @@ export default function OrganisationsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("vue");
+    if (v === "liste" || v === "carte") setView(v);
+  }, []);
+  function changeView(v: "liste" | "carte") {
+    setView(v);
+    const sp = new URLSearchParams(window.location.search);
+    sp.set("vue", v);
+    window.history.replaceState(null, "", `${window.location.pathname}?${sp.toString()}`);
+  }
+
+  useEffect(() => {
     fetch("/app/api/organisations").then((r) => r.json()).then((d) => setOrgs(d.organisations || [])).catch(() => {}).finally(() => setLoading(false));
     fetch("/app/api/organisations/mine").then((r) => r.json()).then((d) => setMine(d.organisations || [])).catch(() => {});
     fetch("/app/api/organisations/geo").then((r) => r.json()).then((d) => setAllPoints(d.points || [])).catch(() => {});
@@ -115,7 +126,7 @@ export default function OrganisationsPage() {
 
   const points = useMemo(() => {
     const ids = new Set(list.map((x) => x.id));
-    return allPoints.filter((p) => ids.has(p.id));
+    return allPoints.filter((p) => ids.has(p.id)).map((p) => ({ ...p, href: `${p.href}?vue=carte` }));
   }, [allPoints, list]);
 
   async function create() {
@@ -142,7 +153,7 @@ export default function OrganisationsPage() {
           <h2 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "0 0 10px" }}>{tr.mine}</h2>
           <div className="idees-grid">
             {mine.map((o) => (
-              <Link key={o.id} href={`/organisations/${o.id}`} className="icard">
+              <Link key={o.id} href={`/organisations/${o.id}?vue=liste`} className="icard">
                 {orgHeader(o)}
                 <div className="bd">
                   <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", color: "#9C919E" }}>{typeLabel(o.type, tr)}</span>
@@ -167,8 +178,8 @@ export default function OrganisationsPage() {
           {TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, tr)}</option>)}
         </select>
         <div style={{ display: "inline-flex", border: "1px solid #E3D7CC", borderRadius: 10, overflow: "hidden", marginLeft: "auto" }}>
-          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>{tr.list}</button>
-          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>{tr.map}</button>
+          <button type="button" onClick={() => changeView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>{tr.list}</button>
+          <button type="button" onClick={() => changeView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>{tr.map}</button>
         </div>
       </div>
 
@@ -177,7 +188,7 @@ export default function OrganisationsPage() {
       : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((o) => <OrgCard key={o.id} o={o} />)}
+            {list.map((o) => <OrgCard key={o.id} o={o} view={view} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />
@@ -185,7 +196,7 @@ export default function OrganisationsPage() {
         </div>
       ) : (
         <div className="idees-grid">
-          {list.map((o) => <OrgCard key={o.id} o={o} />)}
+          {list.map((o) => <OrgCard key={o.id} o={o} view={view} />)}
         </div>
       )}
 

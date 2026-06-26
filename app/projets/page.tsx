@@ -64,11 +64,11 @@ function initials(n: string) {
   return n.replace(/[^A-Za-zÀ-ſ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "P";
 }
 
-function ProjetCard({ p }: { p: Projet }) {
+function ProjetCard({ p, view }: { p: Projet; view: "liste" | "carte" }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
   return (
-    <Link href={`/projets/${p.id}`} className="icard">
+    <Link href={`/projets/${p.id}?vue=${view}`} className="icard">
       {p.image ? (
         <div style={{ height: 96, flexShrink: 0, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.4)), url("${p.image}")`, backgroundSize: "cover", backgroundPosition: "center" }} />
       ) : (
@@ -101,6 +101,17 @@ export default function ProjetsPage() {
 
   const TABS: [string, string][] = [["tous", tr.tabTous], ["suivis", tr.tabSuivis], ["emis", tr.tabEmis]];
 
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("vue");
+    if (v === "liste" || v === "carte") setView(v);
+  }, []);
+  function changeView(v: "liste" | "carte") {
+    setView(v);
+    const sp = new URLSearchParams(window.location.search);
+    sp.set("vue", v);
+    window.history.replaceState(null, "", `${window.location.pathname}?${sp.toString()}`);
+  }
+
   function load(t: string) {
     setLoading(true);
     fetch(`/app/api/projets?filter=${t}`).then((r) => r.json()).then((d) => setProjets(d.projets || [])).catch(() => {}).finally(() => setLoading(false));
@@ -119,7 +130,7 @@ export default function ProjetsPage() {
 
   const points = useMemo(() => {
     const ids = new Set(list.map((x) => x.id));
-    return allPoints.filter((p) => ids.has(p.id));
+    return allPoints.filter((p) => ids.has(p.id)).map((p) => ({ ...p, href: `${p.href}?vue=carte` }));
   }, [allPoints, list]);
 
   async function create() {
@@ -154,8 +165,8 @@ export default function ProjetsPage() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr.search} />
         </div>
         <div style={{ display: "inline-flex", border: "1px solid #E3D7CC", borderRadius: 10, overflow: "hidden", marginLeft: "auto" }}>
-          <button type="button" onClick={() => setView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>{tr.list}</button>
-          <button type="button" onClick={() => setView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>{tr.map}</button>
+          <button type="button" onClick={() => changeView("liste")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "liste" ? "#C2452F" : "#FCF9F6", color: view === "liste" ? "#fff" : "#5E4A73" }}>{tr.list}</button>
+          <button type="button" onClick={() => changeView("carte")} style={{ border: "none", cursor: "pointer", padding: "8px 14px", fontSize: 14, fontWeight: 700, background: view === "carte" ? "#C2452F" : "#FCF9F6", color: view === "carte" ? "#fff" : "#5E4A73" }}>{tr.map}</button>
         </div>
       </div>
 
@@ -164,7 +175,7 @@ export default function ProjetsPage() {
       : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((p) => <ProjetCard key={p.id} p={p} />)}
+            {list.map((p) => <ProjetCard key={p.id} p={p} view={view} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />
@@ -172,7 +183,7 @@ export default function ProjetsPage() {
         </div>
       ) : (
         <div className="idees-grid">
-          {list.map((p) => <ProjetCard key={p.id} p={p} />)}
+          {list.map((p) => <ProjetCard key={p.id} p={p} view={view} />)}
         </div>
       )}
 
