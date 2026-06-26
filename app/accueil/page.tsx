@@ -49,7 +49,7 @@ export default function AccueilPage() {
         <div className="rail">
           {ideas.slice(0, 6).map((it) => (
             <Link className="idea" key={it.id} href={`/idees/${it.id}`} style={{ textDecoration: "none" }}>
-              <div className="top" style={{ background: it.color }}>
+              <div className="top" style={it.image ? { backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.35)), url(\"${it.image}\")`, backgroundSize: "cover", backgroundPosition: "center" } : { background: it.color }}>
                 <span className="cat">{it.cat}</span>
               </div>
               <div className="bd">
@@ -70,7 +70,7 @@ export default function AccueilPage() {
         <div className="rail">
           {events.slice(0, 6).map((ev) => (
             <article className="event" key={ev.id}>
-              <div className="img" style={{ backgroundImage: ev.grad }}>
+              <div className="img" style={ev.image ? { backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.12), rgba(40,28,52,.5)), url(\"${ev.image}\")` } : { backgroundImage: ev.grad }}>
                 <span className="tag">{ev.tag}</span>
                 <span className="date"><b>{ev.day}</b><small>{ev.month}</small></span>
               </div>
