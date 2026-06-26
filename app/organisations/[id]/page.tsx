@@ -11,7 +11,7 @@ type Org = {
   id: number; name: string; type: string; region: string | null; desc: string;
   budget: number | null; benevoles: number | null; annee: number | null;
   adresse: string | null; telephone: string | null; email: string | null; site: string | null;
-  labellisee: boolean; grad: string;
+  labellisee: boolean; grad: string; image: string | null;
 };
 type Pub = { id: number; kind: "proposition" | "reussite"; titre: string; corps: string; auteur: string; created_at: string };
 
@@ -67,7 +67,11 @@ export default function OrgDetailPage() {
       </Link>
 
       <section className="idetail" style={{ maxWidth: 820 }}>
-        <div style={{ height: 120, background: org.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 40, fontFamily: "var(--font-display),cursive" }}>{initials(org.name)}</div>
+        {org.image ? (
+          <div style={{ height: 190, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.42)), url(\"${org.image}\")`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        ) : (
+          <div style={{ height: 120, background: org.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 40, fontFamily: "var(--font-display),cursive" }}>{initials(org.name)}</div>
+        )}
         <div className="body">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", color: "#5E4A73", background: "#EFE8F2", borderRadius: 999, padding: "3px 10px" }}>{org.type}</span>

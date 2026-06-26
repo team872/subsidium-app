@@ -8,7 +8,7 @@ import MaillageS from "@/components/MaillageS";
 import { useLang } from "@/components/LangProvider";
 import "@/components/MemberBoards.css";
 
-type Projet = { id: number; title: string; theme: string | null; desc: string; lieu: string | null; prive: boolean; membres: number; grad: string };
+type Projet = { id: number; title: string; theme: string | null; desc: string; lieu: string | null; prive: boolean; membres: number; grad: string; image: string | null };
 type Member = { nom: string; prenom: string; role: string };
 type Post = { id: number; corps: string; auteur: string; created_at: string };
 type Cand = { id: number; nom: string; prenom: string; email: string; presentation: string; statut: string; created_at: string };
@@ -156,7 +156,11 @@ export default function ProjetDetailPage() {
       </Link>
 
       <section className="idetail" style={{ maxWidth: 820 }}>
-        <div style={{ height: 120, background: projet.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 40, fontFamily: "var(--font-display),cursive" }}>{initials(projet.title)}</div>
+        {projet.image ? (
+          <div style={{ height: 190, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.05), rgba(40,28,52,.4)), url(\"${projet.image}\")`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        ) : (
+          <div style={{ height: 120, background: projet.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 40, fontFamily: "var(--font-display),cursive" }}>{initials(projet.title)}</div>
+        )}
         <div className="body">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
             {projet.theme && <span style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", color: "#5E4A73", background: "#EFE8F2", borderRadius: 999, padding: "3px 10px" }}>{projet.theme}</span>}
