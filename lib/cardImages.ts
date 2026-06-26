@@ -1,7 +1,10 @@
 import { query, ensureDb } from "./db";
+import { keywordsFromText } from "./keywords";
+import { ensureProjets } from "./projetsData";
+import { ensureOrg } from "./orgData";
 
-// Visuels des cartes : colonne `image` (URL) sur events/ideas + recherche d'images
-// libres de droit (Pexels) activée dès que PEXELS_API_KEY est défini côté serveur.
+// Visuels des cartes : colonne `image` (URL) sur events/ideas/projets/organisations + recherche
+// d'images libres de droit (Pexels) activée dès que PEXELS_API_KEY est défini côté serveur.
 // Génération d'illustration IA (FLUX via fal.ai) activée dès que FAL_KEY est défini.
 // Tant que les clés sont absentes, l'app retombe proprement sur le dégradé de marque.
 
@@ -18,8 +21,6 @@ async function init() {
 
 export type StockPhoto = { id: number; thumb: string; full: string; alt: string; credit: string };
 
-// Recherche de photos libres de droit via Pexels (usage commercial autorisé, sans
-// attribution obligatoire). Renvoie [] si la clé n'est pas configurée.
 export async function pexelsSearch(q: string, n = 8): Promise<StockPhoto[]> {
   const key = process.env.PEXELS_API_KEY;
   if (!key || !q.trim()) return [];
@@ -92,8 +93,6 @@ const TAG_QUERY: Record<string, string> = {
   "Récit": "volunteers community project",
 };
 
-// Illustration automatique : remplit le champ image (events/idees) vides via Pexels.
-// Choix déterministe (id % n) pour varier les photos d'une carte à l'autre.
 export async function autoIllustrateEvents(): Promise<number> {
   if (!pexelsConfigured()) return 0;
   await ensureImageCols();
@@ -102,10 +101,7 @@ export async function autoIllustrateEvents(): Promise<number> {
   for (const r of rows) {
     const q = TAG_QUERY[r.tag] || "community local event";
     const photos = await pexelsSearch(q, 6);
-    if (photos.length) {
-      await setEventImage(r.id, photos[r.id % photos.length].full);
-      n++;
-    }
+    if (photos.length) { await setEventImage(r.id, photos[r.id % photos.length].full); n++; }
   }
   return n;
 }
@@ -116,10 +112,33 @@ export async function autoIllustrateIdeas(): Promise<number> {
   let n = 0;
   for (const r of rows) {
     const photos = await pexelsSearch(`${r.cat} community local`, 6);
-    if (photos.length) {
-      await setIdeaImage(r.id, photos[r.id % photos.length].full);
-      n++;
-    }
+    if (photos.length) { await setIdeaImage(r.id, photos[r.id % photos.length].full); n++; }
+  }
+  return n;
+}
+export async function autoIllustrateProjets(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureProjets();
+  await query(`ALTER TABLE projets ADD COLUMN IF NOT EXISTS image TEXT`);
+  const rows = await query<{ id: number; theme: string | null; title: string }>(`SELECT id, theme, title FROM projets WHERE image IS NULL ORDER BY id`);
+  let n = 0;
+  for (const r of rows) {
+    const kw = keywordsFromText(r.title, r.theme || "") || (r.theme || "community project");
+    const photos = await pexelsSearch(`${kw} community project`, 6);
+    if (photos.length) { await query(`UPDATE projets SET image=$2 WHERE id=$1`, [r.id, photos[r.id % photos.length].full]); n++; }
+  }
+  return n;
+}
+export async function autoIllustrateOrgs(): Promise<number> {
+  if (!pexelsConfigured()) return 0;
+  await ensureOrg();
+  await query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS image TEXT`);
+  const rows = await query<{ id: number; type: string | null; name: string }>(`SELECT id, type, name FROM organisations WHERE image IS NULL ORDER BY id`);
+  let n = 0;
+  for (const r of rows) {
+    const kw = keywordsFromText(r.name, r.type || "") || "nonprofit organization";
+    const photos = await pexelsSearch(`${kw} association community`, 6);
+    if (photos.length) { await query(`UPDATE organisations SET image=$2 WHERE id=$1`, [r.id, photos[r.id % photos.length].full]); n++; }
   }
   return n;
 }

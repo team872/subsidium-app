@@ -8,7 +8,7 @@ export type OrgDTO = {
   id: number; name: string; type: string; region: string | null; desc: string;
   budget: number | null; benevoles: number | null; annee: number | null;
   adresse: string | null; telephone: string | null; email: string | null; site: string | null;
-  labellisee: boolean; grad: string;
+  labellisee: boolean; grad: string; image: string | null;
 };
 export type OrgMembership = OrgDTO & { role: string };
 export type PublicationDTO = {
@@ -85,6 +85,7 @@ async function init(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await query(`ALTER TABLE organisations ADD COLUMN IF NOT EXISTS image TEXT`);
   const c = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM organisations`);
   if (c[0].n === 0) {
     for (const o of SEED) {
@@ -102,10 +103,10 @@ function mapOrg(r: any): OrgDTO {
     id: r.id, name: r.name, type: r.type, region: r.region, desc: r.desc,
     budget: r.budget, benevoles: r.benevoles, annee: r.annee,
     adresse: r.adresse, telephone: r.telephone, email: r.email, site: r.site,
-    labellisee: !!r.labellisee, grad: GRADS[(r.id - 1) % GRADS.length],
+    labellisee: !!r.labellisee, grad: GRADS[(r.id - 1) % GRADS.length], image: r.image ?? null,
   };
 }
-const SELECT = `SELECT id,name,type,region,descr AS "desc",budget,benevoles,annee,adresse,telephone,email,site,labellisee FROM organisations`;
+const SELECT = `SELECT id,name,type,region,descr AS "desc",budget,benevoles,annee,adresse,telephone,email,site,labellisee,image FROM organisations`;
 
 export async function listOrganisations(labelliseesOnly = true): Promise<OrgDTO[]> {
   await ensureOrg();
@@ -119,13 +120,13 @@ export async function getOrganisation(id: number): Promise<OrgDTO | null> {
 }
 export async function createOrganisation(
   ownerId: number,
-  f: { name: string; type: string; region?: string; desc?: string; adresse?: string; telephone?: string; email?: string; site?: string }
+  f: { name: string; type: string; region?: string; desc?: string; adresse?: string; telephone?: string; email?: string; site?: string; image?: string | null }
 ): Promise<number> {
   await ensureOrg();
   const rows = await query<{ id: number }>(
-    `INSERT INTO organisations (name,type,region,descr,adresse,telephone,email,site,labellisee,owner_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,FALSE,$9) RETURNING id`,
-    [f.name, f.type, f.region || null, f.desc || null, f.adresse || null, f.telephone || null, f.email || null, f.site || null, ownerId]
+    `INSERT INTO organisations (name,type,region,descr,adresse,telephone,email,site,labellisee,owner_id,image)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,FALSE,$9,$10) RETURNING id`,
+    [f.name, f.type, f.region || null, f.desc || null, f.adresse || null, f.telephone || null, f.email || null, f.site || null, ownerId, f.image || null]
   );
   const id = rows[0].id;
   await query(`INSERT INTO org_members (org_id,user_id,role) VALUES ($1,$2,'owner') ON CONFLICT DO NOTHING`, [id, ownerId]);
@@ -142,7 +143,7 @@ export async function listMyOrganisations(userId: number): Promise<OrgMembership
   await ensureOrg();
   const rows = await query<any>(
     `SELECT o.id,o.name,o.type,o.region,o.descr AS "desc",o.budget,o.benevoles,o.annee,
-            o.adresse,o.telephone,o.email,o.site,o.labellisee, m.role
+            o.adresse,o.telephone,o.email,o.site,o.labellisee,o.image, m.role
      FROM org_members m JOIN organisations o ON o.id=m.org_id
      WHERE m.user_id=$1 ORDER BY o.name ASC`,
     [userId]
