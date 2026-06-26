@@ -139,9 +139,15 @@ export default function IdeaDetailPage() {
 
       <div className="detail-grid">
         <section className="idetail">
-          <div className="band" style={{ background: idea.color }}>
-            <span>{idea.cat}</span>
-          </div>
+          {idea.image ? (
+            <div style={{ height: 210, backgroundImage: `linear-gradient(180deg, rgba(40,28,52,.06), rgba(40,28,52,.45)), url(\"${idea.image}\")`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
+              <span style={{ position: "absolute", left: 20, top: 16, background: idea.color, color: "#fff", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".03em", padding: "4px 12px", borderRadius: 999 }}>{idea.cat}</span>
+            </div>
+          ) : (
+            <div className="band" style={{ background: idea.color }}>
+              <span>{idea.cat}</span>
+            </div>
+          )}
           <div className="body">
             <h1>{idea.title}</h1>
             <div className="meta">
@@ -151,11 +157,6 @@ export default function IdeaDetailPage() {
               <span>· {idea.messages} messages</span>
             </div>
             <p className="txt">{idea.desc} Les habitants du quartier soutiennent cette initiative et souhaitent la construire avec la collectivité, étape par étape, en s'appuyant sur des exemples concrets vécus sur le terrain.</p>
-            <div className="thumbs">
-              <span style={{ background: "linear-gradient(135deg,#E8A98F,#C85A48)" }} />
-              <span style={{ background: "linear-gradient(135deg,#8FB8C9,#5E7E91)" }} />
-              <span style={{ background: "linear-gradient(135deg,#9FC79A,#5E8A57)" }} />
-            </div>
             <button className={following ? "btn btn-ghost" : "btn btn-coral"} onClick={toggleFollow}>
               {following ? "Idée suivie ✓" : "Suivre l'idée"}
             </button>
