@@ -4,7 +4,7 @@ import { ensureOrg } from "./orgData";
 // Market-place (espace Initiateur) : offres et services + côté émetteur (une organisation
 // publie des offres et consulte les demandes de contact). Seed AVP (p160-163).
 
-export type OffreDTO = { id: number; title: string; provider: string; desc: string; price: string; grad: string };
+export type OffreDTO = { id: number; title: string; provider: string; desc: string; price: string; grad: string; image: string | null };
 export type EmittedOffreDTO = OffreDTO & { contacts: number };
 export type OffreContactDTO = { id: number; nom: string; prenom: string; email: string; message: string; created_at: string };
 
@@ -39,6 +39,7 @@ async function init(): Promise<void> {
     );
     ALTER TABLE offres ADD COLUMN IF NOT EXISTS owner_id INT;
     ALTER TABLE offres ADD COLUMN IF NOT EXISTS org_id INT;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS image TEXT;
     CREATE TABLE IF NOT EXISTS offre_contacts (
       id SERIAL PRIMARY KEY,
       offre_id INT REFERENCES offres(id) ON DELETE CASCADE,
@@ -55,9 +56,9 @@ async function init(): Promise<void> {
 }
 
 function mapOffre(r: any): OffreDTO {
-  return { id: r.id, title: r.title, provider: r.provider || "Subsidium", desc: r.desc, price: r.price, grad: GRADS[(r.id - 1) % GRADS.length] };
+  return { id: r.id, title: r.title, provider: r.provider || "Subsidium", desc: r.desc, price: r.price, grad: GRADS[(r.id - 1) % GRADS.length], image: r.image ?? null };
 }
-const SELECT = `SELECT id, title, provider, descr AS "desc", price FROM offres`;
+const SELECT = `SELECT id, title, provider, descr AS "desc", price, image FROM offres`;
 
 export async function listOffres(): Promise<OffreDTO[]> {
   await ensureMarket();
@@ -82,22 +83,22 @@ export async function createContact(
 // --- côté émetteur (organisation) ---
 
 export async function createOffreForOrg(
-  orgId: number, ownerId: number, f: { title: string; desc: string; price: string }
+  orgId: number, ownerId: number, f: { title: string; desc: string; price: string; image?: string | null }
 ): Promise<number> {
   await ensureMarket();
   await ensureOrg();
   const o = await query<{ name: string }>(`SELECT name FROM organisations WHERE id=$1`, [orgId]);
   const provider = o[0]?.name || "";
   const rows = await query<{ id: number }>(
-    `INSERT INTO offres (title,provider,descr,price,owner_id,org_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-    [f.title, provider, f.desc, f.price, ownerId, orgId]
+    `INSERT INTO offres (title,provider,descr,price,owner_id,org_id,image) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [f.title, provider, f.desc, f.price, ownerId, orgId, f.image || null]
   );
   return rows[0].id;
 }
 export async function listOrgOffres(orgId: number): Promise<EmittedOffreDTO[]> {
   await ensureMarket();
   const rows = await query<any>(
-    `SELECT id, title, provider, descr AS "desc", price,
+    `SELECT id, title, provider, descr AS "desc", price, image,
        (SELECT COUNT(*)::int FROM offre_contacts c WHERE c.offre_id = offres.id) AS contacts
      FROM offres WHERE org_id=$1 ORDER BY id DESC`,
     [orgId]
