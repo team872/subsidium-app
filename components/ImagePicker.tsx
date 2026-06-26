@@ -7,9 +7,9 @@ type Photo = { id: number; thumb: string; full: string; alt: string; credit: str
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
-  fr: { ph: "Mots-clés (pré-remplis depuis votre texte)", search: "Rechercher", gen: "✨ Générer (IA)", genBusy: "Génération…", searching: "Recherche…", none: "Aucune image. Essayez d'autres mots-clés.", noKey: "Recherche d'images indisponible (clé Pexels non configurée).", genOff: "Génération IA non configurée (clé fal.ai requise).", remove: "Retirer", hint: "Choisissez une photo libre de droit ou générez une illustration." },
-  en: { ph: "Keywords (prefilled from your text)", search: "Search", gen: "✨ Generate (AI)", genBusy: "Generating…", searching: "Searching…", none: "No image. Try other keywords.", noKey: "Image search unavailable (Pexels key not configured).", genOff: "AI generation not configured (fal.ai key required).", remove: "Remove", hint: "Pick a royalty-free photo or generate an illustration." },
-  it: { ph: "Parole chiave (precompilate dal testo)", search: "Cerca", gen: "✨ Genera (IA)", genBusy: "Generazione…", searching: "Ricerca…", none: "Nessuna immagine. Prova altre parole chiave.", noKey: "Ricerca immagini non disponibile (chiave Pexels non configurata).", genOff: "Generazione IA non configurata (chiave fal.ai richiesta).", remove: "Rimuovi", hint: "Scegli una foto royalty-free o genera un'illustrazione." },
+  fr: { ph: "Mots-clés (pré-remplis depuis votre texte)", search: "Rechercher", gen: "✨ Générer (IA)", genBusy: "Génération…", searching: "Recherche…", none: "Aucune image. Essayez d'autres mots-clés.", noKey: "Recherche d'images indisponible (clé Pexels non configurée).", genOff: "Génération IA non configurée (clé fal.ai requise).", genFail: "La génération n'a pas abouti (réessayez ou vérifiez le solde fal.ai).", remove: "Retirer", hint: "Choisissez une photo libre de droit ou générez une illustration." },
+  en: { ph: "Keywords (prefilled from your text)", search: "Search", gen: "✨ Generate (AI)", genBusy: "Generating…", searching: "Searching…", none: "No image. Try other keywords.", noKey: "Image search unavailable (Pexels key not configured).", genOff: "AI generation not configured (fal.ai key required).", genFail: "Generation failed (retry or check your fal.ai balance).", remove: "Remove", hint: "Pick a royalty-free photo or generate an illustration." },
+  it: { ph: "Parole chiave (precompilate dal testo)", search: "Cerca", gen: "✨ Genera (IA)", genBusy: "Generazione…", searching: "Ricerca…", none: "Nessuna immagine. Prova altre parole chiave.", noKey: "Ricerca immagini non disponibile (chiave Pexels non configurata).", genOff: "Generazione IA non configurata (chiave fal.ai richiesta).", genFail: "Generazione non riuscita (riprova o controlla il saldo fal.ai).", remove: "Rimuovi", hint: "Scegli una foto royalty-free o genera un'illustrazione." },
 };
 
 export default function ImagePicker({ seed, value, onPick }: { seed: string; value: string | null; onPick: (url: string | null) => void }) {
@@ -20,7 +20,7 @@ export default function ImagePicker({ seed, value, onPick }: { seed: string; val
   const [loading, setLoading] = useState(false);
   const [noKey, setNoKey] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [genOff, setGenOff] = useState(false);
+  const [genMsg, setGenMsg] = useState("");
   const [touched, setTouched] = useState(false);
 
   async function search() {
@@ -38,13 +38,14 @@ export default function ImagePicker({ seed, value, onPick }: { seed: string; val
   async function generate() {
     const prompt = (q || seed || "").trim();
     if (!prompt) return;
-    setGenBusy(true); setGenOff(false);
+    setGenBusy(true); setGenMsg("");
     try {
       const r = await fetch("/app/api/images/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt }) });
       const d = await r.json();
-      if (d.configured === false) setGenOff(true);
+      if (d.configured === false) setGenMsg(tr.genOff);
       else if (d.url) onPick(d.url);
-    } catch {}
+      else setGenMsg(tr.genFail);
+    } catch { setGenMsg(tr.genFail); }
     setGenBusy(false);
   }
 
@@ -66,7 +67,7 @@ export default function ImagePicker({ seed, value, onPick }: { seed: string; val
       )}
 
       {noKey && <p className="msg">{tr.noKey}</p>}
-      {genOff && <p className="msg">{tr.genOff}</p>}
+      {genMsg && <p className="msg">{genMsg}</p>}
 
       {photos.length > 0 ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px,1fr))", gap: 8, maxHeight: 220, overflowY: "auto" }}>
