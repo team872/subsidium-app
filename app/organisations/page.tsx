@@ -85,6 +85,22 @@ function OrgCard({ o, view }: { o: Org; view: "liste" | "carte" }) {
   );
 }
 
+// Ligne compacte (sans photo) pour la colonne latérale en vue Carte.
+function OrgRow({ o }: { o: Org }) {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
+  return (
+    <Link href={`/organisations/${o.id}?vue=carte`} style={{ display: "flex", gap: 10, alignItems: "center", background: "#fff", border: "1px solid #EFE3DA", borderRadius: 12, padding: "10px 12px", textDecoration: "none" }}>
+      <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 9, background: o.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 14, fontFamily: "var(--font-display),cursive" }}>{initials(o.name)}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em", color: "#9C919E" }}>{typeLabel(o.type, tr)}</span>
+        <h3 style={{ margin: "1px 0 2px", fontSize: 15, color: "#372646", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.name}</h3>
+        {o.adresse && <p style={{ margin: 0, color: "#9C919E", fontSize: 12.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.adresse}</p>}
+      </div>
+    </Link>
+  );
+}
+
 export default function OrganisationsPage() {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
@@ -187,8 +203,8 @@ export default function OrganisationsPage() {
       : list.length === 0 ? <p className="board-empty">{tr.empty}</p>
       : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((o) => <OrgCard key={o.id} o={o} view={view} />)}
+          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 8, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
+            {list.map((o) => <OrgRow key={o.id} o={o} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />

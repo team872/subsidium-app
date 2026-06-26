@@ -51,6 +51,17 @@ function IdeaCard({ it, view }: { it: IdeaDTO; view: "liste" | "carte" }) {
   );
 }
 
+// Ligne compacte (sans photo) pour la colonne latérale en vue Carte.
+function IdeaRow({ it }: { it: IdeaDTO }) {
+  return (
+    <Link href={`/idees/${it.id}?vue=carte`} style={{ display: "block", background: "#fff", border: "1px solid #EFE3DA", borderLeft: `4px solid ${it.color}`, borderRadius: 12, padding: "10px 14px", textDecoration: "none" }}>
+      <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em", color: "#9C919E" }}>{it.cat}</span>
+      <h3 style={{ margin: "2px 0 3px", fontSize: 15, color: "#372646", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</h3>
+      <p style={{ margin: 0, color: "#9C919E", fontSize: 12.5 }}>{it.messages} messages · Par {it.author}</p>
+    </Link>
+  );
+}
+
 export default function IdeesPage() {
   const [items, setItems] = useState<IdeaDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,8 +160,8 @@ export default function IdeesPage() {
         <p className="board-empty">Aucune idée ne correspond à votre recherche pour le moment.</p>
       ) : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((it) => <IdeaCard key={it.id} it={it} view={view} />)}
+          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 8, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
+            {list.map((it) => <IdeaRow key={it.id} it={it} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />

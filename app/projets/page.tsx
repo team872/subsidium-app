@@ -83,6 +83,22 @@ function ProjetCard({ p, view }: { p: Projet; view: "liste" | "carte" }) {
   );
 }
 
+// Ligne compacte (sans photo) pour la colonne latérale en vue Carte.
+function ProjetRow({ p }: { p: Projet }) {
+  const { lang } = useLang();
+  const tr = DICT[lang] || DICT.fr;
+  return (
+    <Link href={`/projets/${p.id}?vue=carte`} style={{ display: "flex", gap: 10, alignItems: "center", background: "#fff", border: "1px solid #EFE3DA", borderRadius: 12, padding: "10px 12px", textDecoration: "none" }}>
+      <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 9, background: p.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 14, fontFamily: "var(--font-display),cursive" }}>{initials(p.title)}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em", color: "#9C919E" }}>{p.theme || tr.projet}{p.prive ? " · " + tr.prive : ""}</span>
+        <h3 style={{ margin: "1px 0 2px", fontSize: 15, color: "#372646", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.title}</h3>
+        {p.lieu && <p style={{ margin: 0, color: "#9C919E", fontSize: 12.5 }}>{p.lieu} · {p.membres} {p.membres > 1 ? tr.members : tr.member}</p>}
+      </div>
+    </Link>
+  );
+}
+
 export default function ProjetsPage() {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
@@ -174,8 +190,8 @@ export default function ProjetsPage() {
       : list.length === 0 ? <p className="board-empty">{tab === "tous" ? tr.emptyTous : tab === "suivis" ? tr.emptySuivis : tr.emptyEmis}</p>
       : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 10, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((p) => <ProjetCard key={p.id} p={p} view={view} />)}
+          <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 8, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
+            {list.map((p) => <ProjetRow key={p.id} p={p} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />
