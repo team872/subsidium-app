@@ -25,6 +25,7 @@ async function init() {
   await query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS author_id INT`);
   await query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS org_id INT`);
   await query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now()`);
+  await query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS image TEXT`);
 }
 
 function mapRow(r: any): ActualiteDTO {
@@ -42,15 +43,15 @@ export async function getActualite(id: number): Promise<ActualiteDTO | null> {
   const rows = await query<any>(`SELECT ${COLS} FROM events WHERE id=$1`, [id]);
   return rows[0] ? mapRow(rows[0]) : null;
 }
-export async function createActualite(f: { tag: string; title: string; desc: string; source?: string | null; authorId?: number | null; orgId?: number | null }): Promise<number> {
+export async function createActualite(f: { tag: string; title: string; desc: string; source?: string | null; authorId?: number | null; orgId?: number | null; image?: string | null; day?: string | null; month?: string | null }): Promise<number> {
   await ensureActualites();
-  const d = new Date();
-  const day = String(d.getDate());
-  const month = MONTHS_FR[d.getMonth()];
+  const dt = new Date();
+  const day = (f.day && String(f.day).trim()) || String(dt.getDate());
+  const month = (f.month && String(f.month).trim()) || MONTHS_FR[dt.getMonth()];
   const grad = GRADS[Math.floor(Math.random() * GRADS.length)];
   const rows = await query<{ id: number }>(
-    `INSERT INTO events (tag,title,descr,day,month,grad,source,author_id,org_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
-    [f.tag, f.title, f.desc, day, month, grad, f.source || null, f.authorId || null, f.orgId || null]);
+    `INSERT INTO events (tag,title,descr,day,month,grad,source,author_id,org_id,image) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+    [f.tag, f.title, f.desc, day, month, grad, f.source || null, f.authorId || null, f.orgId || null, f.image || null]);
   return rows[0].id;
 }
 export async function updateActualite(id: number, f: { tag?: string; title?: string; desc?: string; source?: string | null }): Promise<void> {
