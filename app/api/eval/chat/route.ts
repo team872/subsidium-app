@@ -1,35 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CascadeLLM, ChatMessage } from "@/lib/agent/llm";
+import { agent1ChatPrompt, agent2ChatPrompt, agent2ChatPromptCourt } from "@/lib/agent/prompts";
 
-// Relais serveur vers l'agent (conteneur subsidium-test). L'appel se fait de conteneur
-// à conteneur sur le réseau Docker partagé : aucun identifiant n'est nécessaire (le
-// basic-auth Traefik ne s'applique qu'au bord public). `agent` = "eval" | "charte".
+// Agent conversationnel servi DANS l'app (anciennement conteneur subsidium-test).
+// Cascade de modèles OpenRouter ; en cas d'échec total -> { fallback:true } pour
+// que l'UI bascule vers le formulaire / questionnaire classique.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BASE = process.env.AGENT_BASE_URL || "http://subsidium-test:8090";
-
 export async function POST(req: NextRequest) {
   let body: any = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "Requête invalide." }, { status: 400 }); }
+
+  if (!process.env.OPENROUTER_API_KEY) {
+    return NextResponse.json({ error: "Assistant IA non configuré.", fallback: true }, { status: 503 });
   }
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 60_000);
+  const sys =
+    body.agent === "eval_court" ? agent2ChatPromptCourt()
+    : body.agent === "eval" ? agent2ChatPrompt()
+    : agent1ChatPrompt();
+  const messages: ChatMessage[] = [
+    { role: "system", content: sys },
+    ...(Array.isArray(body.messages) ? body.messages : []),
+  ];
+
   try {
-    const r = await fetch(`${BASE}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agent: body.agent === "charte" ? "charte" : "eval", messages: Array.isArray(body.messages) ? body.messages : [] }),
-      signal: ctrl.signal,
-    });
-    const data = await r.json().catch(() => ({ error: "Réponse illisible de l'évaluateur." }));
-    return NextResponse.json(data, { status: r.status });
+    const reply = await new CascadeLLM().complete(messages);
+    return NextResponse.json({ reply });
   } catch {
-    return NextResponse.json({ error: "Service d'évaluation momentanément indisponible." }, { status: 502 });
-  } finally {
-    clearTimeout(timer);
+    return NextResponse.json({ error: "Assistant IA momentanément indisponible.", fallback: true }, { status: 503 });
   }
 }
