@@ -7,7 +7,6 @@ import { useT, useLang } from "@/components/LangProvider";
 
 type Mode = "choix" | "form" | "chat";
 
-// Les 8 dimensions de la grille ethique evaluees par l'auto-evaluation (20 questions).
 const DOMAINS: Record<string, string[]> = {
   fr: [
     "Dignité de la personne humaine", "Bien commun", "Responsabilité intégrale", "Subsidiarité active",
@@ -31,8 +30,6 @@ const DOM_INTRO: Record<string, string> = {
   it: "L'autovalutazione riguarda 8 dimensioni della griglia etica (20 domande):",
 };
 
-// Etape d'auto-evaluation « au choix » : questionnaire guide, entretien avec l'agent IA,
-// ou possibilite de passer cette etape facultative pour aller directement a la Charte.
 export default function EvalFlow({
   onResult,
   onSkip,
@@ -57,7 +54,7 @@ export default function EvalFlow({
     return (
       <div>
         <button type="button" onClick={() => setMode("choix")} style={backLink}>{t("eval.changeMode")}</button>
-        <AutoEvalChat onResult={(s) => onResult?.(s)} />
+        <AutoEvalChat onResult={(s) => onResult?.(s)} onFallback={() => setMode("form")} />
       </div>
     );
   }

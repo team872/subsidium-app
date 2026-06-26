@@ -19,8 +19,6 @@ const API = "/app/api/eval";
 const TARGET_QUESTIONS = 20;
 const OPENER = "Bonjour, je suis prêt(e) à commencer l'entretien.";
 
-// Détecte les réponses d'erreur d'infrastructure / fournisseur (OpenRouter, 429, JSON
-// d'erreur, indisponibilité…) qu'il ne faut JAMAIS afficher telles quelles à l'utilisateur.
 function isAgentError(s?: string): boolean {
   if (!s || !s.trim()) return true;
   return /(^\s*OpenRouter|"error"\s*:|"code"\s*:\s*\d|rate.?limit|temporarily|provider returned|unavailable|<\/?html|bad gateway|gateway time|quota|exhausted|too many requests|\b429\b|\b50[023]\b)/i.test(s);
@@ -30,7 +28,8 @@ type Dict = Record<string, string>;
 const DICT: Record<string, Dict> = {
   fr: {
     noReply: "(pas de réponse)", connErr: "Connexion à l'évaluateur impossible. Réessayez.", scoreErr: "Évaluation impossible pour le moment.",
-    agentBusy: "L'assistant IA est momentanément indisponible (forte affluence). Réessayez dans un instant, ou utilisez le « Questionnaire guidé ».",
+    agentBusy: "L'assistant IA est momentanément indisponible. Réessayez dans un instant, ou utilisez le « Questionnaire guidé ».",
+    toForm: "Passer au questionnaire guidé",
     intro: "Cette étape n'est pas un test idéologique. Un agent SUBSIDIUM vous accompagne dans un entretien qui passe en revue les grandes dimensions de votre engagement. Répondez avec vos propres mots et, si vous le pouvez, illustrez d'un exemple concret vécu — c'est ce qui permet d'établir votre palier. Vous pourrez conclure à tout moment.",
     start: "Démarrer l'entretien", dimension: "Dimension", on: "sur", evaluator: "Évaluateur SUBSIDIUM",
     replyPh: "Votre réponse…", send: "Envoyer",
@@ -38,7 +37,8 @@ const DICT: Record<string, Dict> = {
   },
   en: {
     noReply: "(no reply)", connErr: "Could not connect to the evaluator. Please try again.", scoreErr: "Assessment failed for now.",
-    agentBusy: "The AI assistant is momentarily unavailable (high demand). Try again shortly, or use the “Guided questionnaire”.",
+    agentBusy: "The AI assistant is momentarily unavailable. Try again shortly, or use the “Guided questionnaire”.",
+    toForm: "Switch to the guided questionnaire",
     intro: "This step is not an ideological test. A SUBSIDIUM agent guides you through an interview reviewing the main dimensions of your commitment. Answer in your own words and, if you can, illustrate with a concrete lived example — this is what establishes your level. You can conclude at any time.",
     start: "Start the interview", dimension: "Dimension", on: "of", evaluator: "SUBSIDIUM Evaluator",
     replyPh: "Your reply…", send: "Send",
@@ -46,7 +46,8 @@ const DICT: Record<string, Dict> = {
   },
   it: {
     noReply: "(nessuna risposta)", connErr: "Connessione al valutatore impossibile. Riprova.", scoreErr: "Valutazione impossibile per ora.",
-    agentBusy: "L'assistente IA è momentaneamente non disponibile (forte affluenza). Riprova tra poco o usa il « Questionario guidato ».",
+    agentBusy: "L'assistente IA è momentaneamente non disponibile. Riprova tra poco o usa il « Questionario guidato ».",
+    toForm: "Passa al questionario guidato",
     intro: "Questa tappa non è un test ideologico. Un agente SUBSIDIUM ti accompagna in un colloquio che passa in rassegna le principali dimensioni del tuo impegno. Rispondi con parole tue e, se puoi, illustra con un esempio concreto vissuto — è ciò che permette di stabilire il tuo livello. Puoi concludere in qualsiasi momento.",
     start: "Avviare il colloquio", dimension: "Dimensione", on: "su", evaluator: "Valutatore SUBSIDIUM",
     replyPh: "La tua risposta…", send: "Invia",
@@ -66,7 +67,7 @@ function splitQuestion(text: string) {
   };
 }
 
-export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary | null) => void }) {
+export default function AutoEvalChat({ onResult, onFallback }: { onResult: (s: EvalSummary | null) => void; onFallback?: () => void }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
   const [history, setHistory] = useState<Msg[]>([]);
@@ -82,6 +83,13 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
     if (el) el.scrollTop = el.scrollHeight;
   }, [history, busy]);
 
+  function fallbackBtn() {
+    if (!onFallback) return null;
+    return (
+      <button type="button" className="btn btn-coral" style={{ marginTop: 10 }} onClick={onFallback}>{tr.toForm}</button>
+    );
+  }
+
   async function chat(next: Msg[]) {
     setBusy(true);
     setError("");
@@ -93,11 +101,10 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
       });
       const d = await r.json().catch(() => ({} as any));
       const reply: string = (d.reply ?? "").toString();
-      // Réponse d'erreur (fournisseur indisponible, 429…) : message clair, jamais le JSON brut.
-      if (!r.ok || isAgentError(reply) || isAgentError((d.error ?? "").toString())) {
+      if (!r.ok || d.fallback || isAgentError(reply) || isAgentError((d.error ?? "").toString())) {
         setError(tr.agentBusy);
         const hadAgentReply = next.some((m, i) => i > 0 && m.role === "assistant");
-        if (!hadAgentReply) { setStarted(false); setHistory([]); } // 1er appel KO : retour propre à l'intro
+        if (!hadAgentReply) { setStarted(false); setHistory([]); }
         setBusy(false);
         return;
       }
@@ -142,7 +149,7 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
       });
       const d = await r.json().catch(() => ({} as any));
       if (!r.ok || d.error || !d.result) {
-        setError(isAgentError((d.error ?? "").toString()) ? tr.scoreErr : (d.error || tr.scoreErr));
+        setError(tr.scoreErr);
         setBusy(false);
         return;
       }
@@ -168,8 +175,11 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
     return (
       <div className="eval-intro">
         <p>{tr.intro}</p>
-        {error && <p className="msg" style={{ margin: "0 0 10px" }}>{error}</p>}
-        <button type="button" className="btn btn-coral" onClick={start}>{tr.start}</button>
+        {error && <p className="msg" style={{ margin: "0 0 6px" }}>{error}</p>}
+        {error && fallbackBtn()}
+        <div style={{ marginTop: error ? 10 : 0 }}>
+          <button type="button" className="btn btn-coral" onClick={start}>{tr.start}</button>
+        </div>
       </div>
     );
   }
@@ -215,6 +225,7 @@ export default function AutoEvalChat({ onResult }: { onResult: (s: EvalSummary |
       </div>
 
       {error && <p className="msg" style={{ marginTop: 10 }}>{error}</p>}
+      {error && fallbackBtn()}
 
       <div className="chat-input">
         <input

@@ -10,8 +10,6 @@ type Msg = { role: "user" | "assistant"; content: string };
 const API = "/app/api/eval";
 const OPENER = "Bonjour, je souhaite adhérer à la charte d'engagement Subsidium.";
 
-// Détecte les réponses d'erreur d'infrastructure / fournisseur (OpenRouter, 429, JSON
-// d'erreur, indisponibilité…) qu'il ne faut JAMAIS afficher telles quelles à l'utilisateur.
 function isAgentError(s?: string): boolean {
   if (!s || !s.trim()) return true;
   return /(^\s*OpenRouter|"error"\s*:|"code"\s*:\s*\d|rate.?limit|temporarily|provider returned|unavailable|<\/?html|bad gateway|gateway time|quota|exhausted|too many requests|\b429\b|\b50[023]\b)/i.test(s);
@@ -21,7 +19,8 @@ type Dict = Record<string, string>;
 const DICT: Record<string, Dict> = {
   fr: {
     noReply: "(pas de réponse)", connErr: "Connexion à l'agent impossible. Réessayez.", validErr: "Validation impossible pour le moment.",
-    agentBusy: "L'assistant IA est momentanément indisponible (forte affluence). Réessayez dans un instant, ou choisissez l'option « Par formulaire ».",
+    agentBusy: "L'assistant IA est momentanément indisponible. Réessayez dans un instant, ou choisissez l'option « Par formulaire ».",
+    toForm: "Passer au formulaire",
     vValid: "Adhésion validée", vDeepen: "À approfondir",
     noteValid: "Votre adhésion à la charte est validée. Après le paiement, vous accédez au niveau Refondateur et pouvez exprimer vos idées.",
     noteInvalid: "L'agent souhaite approfondir votre adhésion avant de la valider.",
@@ -32,7 +31,8 @@ const DICT: Record<string, Dict> = {
   },
   en: {
     noReply: "(no reply)", connErr: "Could not connect to the agent. Please try again.", validErr: "Validation failed for now.",
-    agentBusy: "The AI assistant is momentarily unavailable (high demand). Try again shortly, or choose the “By form” option.",
+    agentBusy: "The AI assistant is momentarily unavailable. Try again shortly, or choose the “By form” option.",
+    toForm: "Switch to the form",
     vValid: "Membership validated", vDeepen: "To deepen",
     noteValid: "Your adherence to the charter is validated. After payment, you reach the Refounder level and can express your ideas.",
     noteInvalid: "The agent would like to deepen your commitment before validating it.",
@@ -43,7 +43,8 @@ const DICT: Record<string, Dict> = {
   },
   it: {
     noReply: "(nessuna risposta)", connErr: "Connessione all'agente impossibile. Riprova.", validErr: "Convalida impossibile per ora.",
-    agentBusy: "L'assistente IA è momentaneamente non disponibile (forte affluenza). Riprova tra poco o scegli l'opzione « Tramite modulo ».",
+    agentBusy: "L'assistente IA è momentaneamente non disponibile. Riprova tra poco o scegli l'opzione « Tramite modulo ».",
+    toForm: "Passa al modulo",
     vValid: "Adesione convalidata", vDeepen: "Da approfondire",
     noteValid: "La tua adesione alla carta è convalidata. Dopo il pagamento, accedi al livello Rifondatore e puoi esprimere le tue idee.",
     noteInvalid: "L'agente desidera approfondire la tua adesione prima di convalidarla.",
@@ -66,7 +67,7 @@ function splitQuestion(text: string) {
   };
 }
 
-export default function CharteChat() {
+export default function CharteChat({ onFallback }: { onFallback?: () => void }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
   const [history, setHistory] = useState<Msg[]>([]);
@@ -82,6 +83,13 @@ export default function CharteChat() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [history, busy]);
 
+  function fallbackBtn() {
+    if (!onFallback) return null;
+    return (
+      <button type="button" className="btn btn-coral" style={{ marginTop: 10 }} onClick={onFallback}>{tr.toForm}</button>
+    );
+  }
+
   async function chat(next: Msg[]) {
     setBusy(true);
     setError("");
@@ -93,7 +101,7 @@ export default function CharteChat() {
       });
       const d = await r.json().catch(() => ({} as any));
       const reply: string = (d.reply ?? "").toString();
-      if (!r.ok || isAgentError(reply) || isAgentError((d.error ?? "").toString())) {
+      if (!r.ok || d.fallback || isAgentError(reply) || isAgentError((d.error ?? "").toString())) {
         setError(tr.agentBusy);
         const hadAgentReply = next.some((m, i) => i > 0 && m.role === "assistant");
         if (!hadAgentReply) { setStarted(false); setHistory([]); }
@@ -139,7 +147,7 @@ export default function CharteChat() {
       });
       const d = await r.json().catch(() => ({} as any));
       if (!r.ok || d.error) {
-        setError(isAgentError((d.error ?? "").toString()) ? tr.validErr : (d.error || tr.validErr));
+        setError(tr.validErr);
         setBusy(false);
         return;
       }
@@ -179,8 +187,11 @@ export default function CharteChat() {
     return (
       <div className="eval-intro">
         <p>{tr.intro}</p>
-        {error && <p className="msg" style={{ margin: "0 0 10px" }}>{error}</p>}
-        <button type="button" className="btn btn-coral" onClick={start}>{tr.startBtn}</button>
+        {error && <p className="msg" style={{ margin: "0 0 6px" }}>{error}</p>}
+        {error && fallbackBtn()}
+        <div style={{ marginTop: error ? 10 : 0 }}>
+          <button type="button" className="btn btn-coral" onClick={start}>{tr.startBtn}</button>
+        </div>
       </div>
     );
   }
@@ -216,6 +227,7 @@ export default function CharteChat() {
       </div>
 
       {error && <p className="msg" style={{ marginTop: 10 }}>{error}</p>}
+      {error && fallbackBtn()}
 
       <div className="chat-input">
         <input
