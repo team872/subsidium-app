@@ -147,7 +147,7 @@ export default function IdeaForm({ onClose, onCreated, edit }: { onClose: () => 
           </div>
           <div className="mfield">
             <label>{tr.fImages}</label>
-            <ImagePicker seed={seed} value={image} onPick={setImage} />
+            <ImagePicker seed={seed} category={cat} value={image} onPick={setImage} />
           </div>
 
           {needLogin ? (
