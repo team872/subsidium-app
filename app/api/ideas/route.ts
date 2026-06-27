@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
     const cat = String(b.cat || "").trim();
     const location = String(b.location || "").trim() || null;
     const image = b.image ? String(b.image).trim() || null : null;
+    // Brouillon (enregistré sans publier, recette AN053) ou idée publiée.
+    const status = b.status === "brouillon" ? "brouillon" : "emise";
     if (!title || !desc || !cat) {
       return NextResponse.json({ error: "Titre, description et thématique requis." }, { status: 400 });
     }
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
     const color = CAT_COLOR[cat] || "#E8A98F";
     // Géocodage best-effort du lieu pour la vue carte (dégradation silencieuse).
     const geo = location ? await geocode(location) : null;
-    const idea = await createIdea({ cat, color, title, desc, author, authorId: uid, location, lat: geo?.lat ?? null, lon: geo?.lon ?? null, image });
+    const idea = await createIdea({ cat, color, title, desc, author, authorId: uid, location, lat: geo?.lat ?? null, lon: geo?.lon ?? null, image, status });
     return NextResponse.json({ idea });
   } catch {
     return NextResponse.json({ error: "Création de l'idée impossible." }, { status: 500 });
