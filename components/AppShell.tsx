@@ -7,6 +7,7 @@ import TestBar from "@/components/TestBar";
 import Mascotte from "@/components/Mascotte";
 import { useLang } from "@/components/LangProvider";
 import { clampNiveau } from "@/lib/niveau";
+import { APP_VERSION } from "@/lib/version";
 
 type Me = { prenom: string | null; nom: string | null; email: string; niveau: number | null } | null;
 
@@ -170,6 +171,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
               </button>
             )}
+          </div>
+          <div style={{ textAlign: "center", color: "#9C8FA3", fontSize: 10.5, padding: "8px 6px 2px", opacity: 0.85 }}>
+            SUBSIDIUM v{APP_VERSION}
           </div>
         </div>
       </aside>
