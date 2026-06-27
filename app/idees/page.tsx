@@ -26,7 +26,35 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-function IdeaCard({ it, view }: { it: IdeaDTO; view: "liste" | "carte" }) {
+function plural(n: number): string {
+  return `${n} message${n > 1 ? "s" : ""}`;
+}
+
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "#C2452F" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+    </svg>
+  );
+}
+
+// Bouton « j'aime » / soutien — ouvert à tous les profils connectés (recette AN056).
+function LikeButton({ it, onLike }: { it: IdeaDTO; onLike: (id: number) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onLike(it.id); }}
+      aria-pressed={it.liked}
+      title={it.liked ? "Retirer mon soutien" : "Soutenir cette idée"}
+      style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0, color: it.liked ? "#C2452F" : "#9C919E", fontSize: 13, fontWeight: 700 }}
+    >
+      <HeartIcon filled={it.liked} />
+      {it.likes}
+    </button>
+  );
+}
+
+function IdeaCard({ it, view, onLike }: { it: IdeaDTO; view: "liste" | "carte"; onLike: (id: number) => void }) {
   return (
     <Link href={`/idees/${it.id}?vue=${view}`} className="icard">
       {it.image ? (
@@ -42,8 +70,9 @@ function IdeaCard({ it, view }: { it: IdeaDTO; view: "liste" | "carte" }) {
         <div className="foot">
           <span className="msg">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z" /></svg>
-            {it.messages} messages
+            {plural(it.messages)}
           </span>
+          <LikeButton it={it} onLike={onLike} />
           <span className="auth">Par {it.author}</span>
         </div>
       </div>
@@ -52,12 +81,15 @@ function IdeaCard({ it, view }: { it: IdeaDTO; view: "liste" | "carte" }) {
 }
 
 // Ligne compacte (sans photo) pour la colonne latérale en vue Carte.
-function IdeaRow({ it }: { it: IdeaDTO }) {
+function IdeaRow({ it, onLike }: { it: IdeaDTO; onLike: (id: number) => void }) {
   return (
     <Link href={`/idees/${it.id}?vue=carte`} style={{ display: "block", background: "#fff", border: "1px solid #EFE3DA", borderLeft: `4px solid ${it.color}`, borderRadius: 12, padding: "10px 14px", textDecoration: "none" }}>
       <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em", color: "#9C919E" }}>{it.cat}</span>
       <h3 style={{ margin: "2px 0 3px", fontSize: 15, color: "#372646", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</h3>
-      <p style={{ margin: 0, color: "#9C919E", fontSize: 12.5 }}>{it.messages} messages · Par {it.author}</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <p style={{ margin: 0, color: "#9C919E", fontSize: 12.5, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plural(it.messages)} · Par {it.author}</p>
+        <LikeButton it={it} onLike={onLike} />
+      </div>
     </Link>
   );
 }
@@ -93,15 +125,30 @@ export default function IdeesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Soutien d'une idée : bascule le like et met à jour le compteur localement.
+  async function like(id: number) {
+    try {
+      const r = await fetch(`/app/api/ideas/${id}/like`, { method: "POST" });
+      if (!r.ok) return;
+      const d = await r.json();
+      setItems((cur) => cur.map((it) => (it.id === id ? { ...it, liked: d.liked, likes: d.likes } : it)));
+    } catch {
+      /* silencieux */
+    }
+  }
+
   const list = useMemo(() => {
     return items.filter((it) => {
-      if (tab === "suivies" && it.status !== "suivie") return false;
-      if (tab === "emises" && it.status !== "emise") return false;
+      // Onglets relatifs au COMPTE de l'utilisateur (recette AN044/AN046/AN060/AN062).
+      if (tab === "suivies" && !it.following) return false;
+      if (tab === "emises" && !it.mine) return false;
       if (tab === "archivees" && it.status !== "archivee") return false;
       if (cat && it.cat !== cat) return false;
       if (query) {
         const q = query.toLowerCase();
-        if (!it.title.toLowerCase().includes(q) && !it.desc.toLowerCase().includes(q)) return false;
+        // Recherche sur titre, description ET localisation (ville / code postal) — recette AN059.
+        const hay = `${it.title} ${it.desc} ${it.location ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
       }
       return true;
     });
@@ -161,7 +208,7 @@ export default function IdeesPage() {
       ) : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 8, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((it) => <IdeaRow key={it.id} it={it} />)}
+            {list.map((it) => <IdeaRow key={it.id} it={it} onLike={like} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />
@@ -169,7 +216,7 @@ export default function IdeesPage() {
         </div>
       ) : (
         <div className="idees-grid">
-          {list.map((it) => <IdeaCard key={it.id} it={it} view={view} />)}
+          {list.map((it) => <IdeaCard key={it.id} it={it} view={view} onLike={like} />)}
         </div>
       )}
     </AppShell>
