@@ -6,28 +6,32 @@ import { getUserPublic } from "@/lib/data";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(req: NextRequest) {
   try {
     await ensureDb();
     const b = await req.json();
     const email = String(b.email || "").trim().toLowerCase();
     const password = String(b.password || "");
-    if (!email || password.length < 8) {
-      return NextResponse.json({ error: "E-mail et mot de passe (8 caractères minimum) requis." }, { status: 400 });
+    if (!email || !EMAIL_RE.test(email)) {
+      return NextResponse.json({ error: "Adresse e-mail invalide." }, { status: 400 });
+    }
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Le mot de passe doit comporter au moins 8 caractères." }, { status: 400 });
     }
     const existing = await query(`SELECT 1 FROM users WHERE email=$1`, [email]);
     if (existing.length) {
       return NextResponse.json({ error: "Un compte existe déjà avec cet e-mail." }, { status: 409 });
     }
     const hash = await hashPassword(password);
-    // Inscription complète (charte signée à l'étape 4 + adhésion) : l'utilisateur
-    // entre au moins Refondateur (1), Initiateur (2) si le badge N2 est obtenu.
-    const niveau = b.badge_n2 ? 2 : 1;
+    // Inscription = création d'un VISITEUR INSCRIT (niveau 0).
+    // La Charte d'engagement (→ Refondateur) et l'auto-évaluation (→ Initiateur)
+    // sont des étapes ULTÉRIEURES et DISSOCIÉES (cf. recette AN043 / AN052).
     const rows = await query<{ id: number }>(
       `INSERT INTO users (email,password_hash,nom,prenom,situation,ville,pays,palier,score,badge_n2,niveau,charte_validee,paye)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,TRUE,TRUE) RETURNING id`,
-      [email, hash, b.nom ?? null, b.prenom ?? null, b.situation ?? null, b.ville ?? null, b.pays ?? null,
-       b.palier ?? null, b.score ?? null, !!b.badge_n2, niveau]
+       VALUES ($1,$2,$3,$4,$5,$6,$7,NULL,NULL,FALSE,0,FALSE,FALSE) RETURNING id`,
+      [email, hash, b.nom ?? null, b.prenom ?? null, b.situation ?? null, b.ville ?? null, b.pays ?? null]
     );
     const id = rows[0].id;
     const token = await signSession(id);

@@ -10,9 +10,12 @@ export const STEPS = [
   "Signature de la charte d'engagement",
 ];
 
-export default function Stepper({ current }: { current: number }) {
+// `total` permet de n'afficher que les N premières étapes (tunnel d'inscription
+// réduit à 2 étapes : compte + informations personnelles).
+export default function Stepper({ current, total }: { current: number; total?: number }) {
   const t = useT();
-  const labels = [t("insc.step1"), t("insc.step2"), t("insc.step3"), t("insc.step4")];
+  const all = [t("insc.step1"), t("insc.step2"), t("insc.step3"), t("insc.step4")];
+  const labels = all.slice(0, Math.max(1, Math.min(all.length, total ?? all.length)));
   return (
     <div className="stepper" role="list" aria-label={t("insc.stepsAria")}>
       {labels.map((label, i) => {
