@@ -30,6 +30,32 @@ function plural(n: number): string {
   return `${n} message${n > 1 ? "s" : ""}`;
 }
 
+function isDraft(it: IdeaDTO): boolean {
+  return it.status === "brouillon";
+}
+
+function DraftBadge() {
+  return (
+    <span style={{ display: "inline-block", background: "#FBE9D8", color: "#B45309", fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em", padding: "2px 8px", borderRadius: 999, marginBottom: 6 }}>
+      Brouillon
+    </span>
+  );
+}
+
+function EditButton({ it, onEdit }: { it: IdeaDTO; onEdit: (it: IdeaDTO) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(it); }}
+      title="Modifier ce brouillon"
+      style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #E3D7CC", borderRadius: 999, padding: "3px 10px", cursor: "pointer", color: "#5E4A73", fontSize: 12.5, fontWeight: 700 }}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
+      Éditer
+    </button>
+  );
+}
+
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "#C2452F" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,7 +80,8 @@ function LikeButton({ it, onLike }: { it: IdeaDTO; onLike: (id: number) => void 
   );
 }
 
-function IdeaCard({ it, view, onLike }: { it: IdeaDTO; view: "liste" | "carte"; onLike: (id: number) => void }) {
+function IdeaCard({ it, view, onLike, onEdit }: { it: IdeaDTO; view: "liste" | "carte"; onLike: (id: number) => void; onEdit: (it: IdeaDTO) => void }) {
+  const draft = isDraft(it);
   return (
     <Link href={`/idees/${it.id}?vue=${view}`} className="icard">
       {it.image ? (
@@ -65,6 +92,7 @@ function IdeaCard({ it, view, onLike }: { it: IdeaDTO; view: "liste" | "carte"; 
         <div className="band" style={{ background: it.color }}><span>{it.cat}</span></div>
       )}
       <div className="bd">
+        {draft && <DraftBadge />}
         <h3>{it.title}</h3>
         <p>{it.desc}</p>
         <div className="foot">
@@ -72,7 +100,7 @@ function IdeaCard({ it, view, onLike }: { it: IdeaDTO; view: "liste" | "carte"; 
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z" /></svg>
             {plural(it.messages)}
           </span>
-          <LikeButton it={it} onLike={onLike} />
+          {draft ? <EditButton it={it} onEdit={onEdit} /> : <LikeButton it={it} onLike={onLike} />}
           <span className="auth">Par {it.author}</span>
         </div>
       </div>
@@ -81,14 +109,15 @@ function IdeaCard({ it, view, onLike }: { it: IdeaDTO; view: "liste" | "carte"; 
 }
 
 // Ligne compacte (sans photo) pour la colonne latérale en vue Carte.
-function IdeaRow({ it, onLike }: { it: IdeaDTO; onLike: (id: number) => void }) {
+function IdeaRow({ it, onLike, onEdit }: { it: IdeaDTO; onLike: (id: number) => void; onEdit: (it: IdeaDTO) => void }) {
+  const draft = isDraft(it);
   return (
     <Link href={`/idees/${it.id}?vue=carte`} style={{ display: "block", background: "#fff", border: "1px solid #EFE3DA", borderLeft: `4px solid ${it.color}`, borderRadius: 12, padding: "10px 14px", textDecoration: "none" }}>
-      <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em", color: "#9C919E" }}>{it.cat}</span>
+      <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em", color: "#9C919E" }}>{it.cat}{draft ? " · Brouillon" : ""}</span>
       <h3 style={{ margin: "2px 0 3px", fontSize: 15, color: "#372646", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</h3>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <p style={{ margin: 0, color: "#9C919E", fontSize: 12.5, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{plural(it.messages)} · Par {it.author}</p>
-        <LikeButton it={it} onLike={onLike} />
+        {draft ? <EditButton it={it} onEdit={onEdit} /> : <LikeButton it={it} onLike={onLike} />}
       </div>
     </Link>
   );
@@ -102,6 +131,7 @@ export default function IdeesPage() {
   const [cat, setCat] = useState("");
   const [view, setView] = useState<"liste" | "carte">("carte");
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<IdeaDTO | null>(null);
   const { rang, charteValidee, paye } = useNiveau();
   const peutProposer = peutProposerIdee(rang);
   const etape = prochaineEtape(rang, charteValidee, paye);
@@ -125,6 +155,13 @@ export default function IdeesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Ajoute une nouvelle idée OU met à jour une idée existante (édition de brouillon).
+  function upsert(idea: IdeaDTO) {
+    setItems((cur) => (cur.some((x) => x.id === idea.id) ? cur.map((x) => (x.id === idea.id ? idea : x)) : [idea, ...cur]));
+    setShowForm(false);
+    setEditing(null);
+  }
+
   // Soutien d'une idée : bascule le like et met à jour le compteur localement.
   async function like(id: number) {
     try {
@@ -139,7 +176,8 @@ export default function IdeesPage() {
 
   const list = useMemo(() => {
     return items.filter((it) => {
-      // Onglets relatifs au COMPTE de l'utilisateur (recette AN044/AN046/AN060/AN062).
+      // Les brouillons ne s'affichent que dans l'onglet « Idées émises » (recette AN053).
+      if (isDraft(it) && tab !== "emises") return false;
       if (tab === "suivies" && !it.following) return false;
       if (tab === "emises" && !it.mine) return false;
       if (tab === "archivees" && it.status !== "archivee") return false;
@@ -177,7 +215,10 @@ export default function IdeesPage() {
       <ParcoursCTA />
 
       {showForm && (
-        <IdeaForm onClose={() => setShowForm(false)} onCreated={(idea) => { setItems((cur) => [idea, ...cur]); setShowForm(false); }} />
+        <IdeaForm onClose={() => setShowForm(false)} onCreated={upsert} />
+      )}
+      {editing && (
+        <IdeaForm edit={editing} onClose={() => setEditing(null)} onCreated={upsert} />
       )}
 
       <div className="board-tabs">
@@ -208,7 +249,7 @@ export default function IdeesPage() {
       ) : view === "carte" ? (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <div style={{ flex: "1 1 320px", maxWidth: 400, display: "flex", flexDirection: "column", gap: 8, maxHeight: 560, overflowY: "auto", paddingRight: 4 }}>
-            {list.map((it) => <IdeaRow key={it.id} it={it} onLike={like} />)}
+            {list.map((it) => <IdeaRow key={it.id} it={it} onLike={like} onEdit={setEditing} />)}
           </div>
           <div style={{ flex: "2 1 440px", minWidth: 300 }}>
             <CarteSubsidium points={points} height={560} />
@@ -216,7 +257,7 @@ export default function IdeesPage() {
         </div>
       ) : (
         <div className="idees-grid">
-          {list.map((it) => <IdeaCard key={it.id} it={it} view={view} onLike={like} />)}
+          {list.map((it) => <IdeaCard key={it.id} it={it} view={view} onLike={like} onEdit={setEditing} />)}
         </div>
       )}
     </AppShell>
