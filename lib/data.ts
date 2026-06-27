@@ -71,25 +71,70 @@ export type IdeaDTO = {
   id: number; cat: string; color: string; title: string; desc: string;
   author: string; status: string | null; date: string; messages: number;
   location: string | null; lat: number | null; lon: number | null; image: string | null;
+  likes: number; liked: boolean; following: boolean; mine: boolean;
 };
 
-const IDEA_SELECT = `
-  SELECT i.id, i.cat, i.color, i.title, i.descr AS "desc", i.author, i.status,
-         i.date_label AS "date", i.location, i.lat, i.lon, i.image,
-         (i.base_messages + (SELECT COUNT(*) FROM comments c WHERE c.idea_id = i.id))::int AS messages
-  FROM ideas i`;
-
-export async function listIdeas(): Promise<IdeaDTO[]> {
-  await ensureDb();
-  await ensureImageCols();
-  return query<IdeaDTO>(`${IDEA_SELECT} ORDER BY i.created_at DESC, i.id DESC`);
+// Table des « j'aime » (soutien d'une opportunité), créée à la volée (idempotent).
+let likesReady = false;
+export async function ensureLikes(): Promise<void> {
+  if (likesReady) return;
+  await query(
+    `CREATE TABLE IF NOT EXISTS likes (
+       user_id INTEGER NOT NULL,
+       idea_id INTEGER NOT NULL,
+       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+       PRIMARY KEY (user_id, idea_id)
+     )`
+  );
+  likesReady = true;
 }
 
-export async function getIdea(id: number): Promise<IdeaDTO | null> {
+// Sélecteur d'idées enrichi des drapeaux relatifs à l'utilisateur courant.
+// uidParam est un placeholder SQL ($1, $2, …) ; 0 = aucun utilisateur (drapeaux à false).
+function ideaSelect(uidParam: string): string {
+  return `
+  SELECT i.id, i.cat, i.color, i.title, i.descr AS "desc", i.author, i.status,
+         i.date_label AS "date", i.location, i.lat, i.lon, i.image,
+         (i.base_messages + (SELECT COUNT(*) FROM comments c WHERE c.idea_id = i.id))::int AS messages,
+         (SELECT COUNT(*) FROM likes l WHERE l.idea_id = i.id)::int AS likes,
+         (${uidParam} <> 0 AND EXISTS (SELECT 1 FROM likes l WHERE l.idea_id = i.id AND l.user_id = ${uidParam})) AS liked,
+         (${uidParam} <> 0 AND EXISTS (SELECT 1 FROM follows f WHERE f.idea_id = i.id AND f.user_id = ${uidParam})) AS following,
+         (${uidParam} <> 0 AND i.author_id = ${uidParam}) AS mine
+  FROM ideas i`;
+}
+
+export async function listIdeas(userId?: number): Promise<IdeaDTO[]> {
   await ensureDb();
   await ensureImageCols();
-  const rows = await query<IdeaDTO>(`${IDEA_SELECT} WHERE i.id = $1`, [id]);
+  await ensureLikes();
+  const uid = userId ?? 0;
+  return query<IdeaDTO>(`${ideaSelect("$1")} ORDER BY i.created_at DESC, i.id DESC`, [uid]);
+}
+
+export async function getIdea(id: number, userId?: number): Promise<IdeaDTO | null> {
+  await ensureDb();
+  await ensureImageCols();
+  await ensureLikes();
+  const uid = userId ?? 0;
+  const rows = await query<IdeaDTO>(`${ideaSelect("$2")} WHERE i.id = $1`, [id, uid]);
   return rows[0] ?? null;
+}
+
+// Bascule le « j'aime » d'une idée pour un utilisateur et renvoie l'état + le total.
+export async function toggleLike(userId: number, ideaId: number): Promise<{ liked: boolean; likes: number }> {
+  await ensureDb();
+  await ensureLikes();
+  const existing = await query(`SELECT 1 FROM likes WHERE user_id=$1 AND idea_id=$2`, [userId, ideaId]);
+  let liked: boolean;
+  if (existing.length) {
+    await query(`DELETE FROM likes WHERE user_id=$1 AND idea_id=$2`, [userId, ideaId]);
+    liked = false;
+  } else {
+    await query(`INSERT INTO likes (user_id, idea_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [userId, ideaId]);
+    liked = true;
+  }
+  const c = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM likes WHERE idea_id=$1`, [ideaId]);
+  return { liked, likes: c[0].n };
 }
 
 export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number; location?: string | null; lat?: number | null; lon?: number | null; image?: string | null }): Promise<IdeaDTO> {
@@ -101,7 +146,8 @@ export async function createIdea(d: { cat: string; color: string; title: string;
      RETURNING id, cat, color, title, descr AS "desc", author, status, date_label AS "date", location, lat, lon, image, 0 AS messages`,
     [d.cat, d.color, d.title, d.desc, d.author, d.authorId, d.location ?? null, d.lat ?? null, d.lon ?? null, d.image ?? null]
   );
-  return rows[0];
+  // Une idée fraîchement créée appartient à son auteur, sans like ni suivi.
+  return { ...rows[0], messages: 0, likes: 0, liked: false, following: false, mine: true };
 }
 
 export type AttachmentMeta = { id: number; filename: string; mime: string; size: number; isImage: boolean };

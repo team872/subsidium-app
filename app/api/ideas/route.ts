@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    return NextResponse.json({ ideas: await listIdeas() });
+    // L'utilisateur courant (s'il est connecté) enrichit chaque idée des drapeaux
+    // « suivie » / « émise par moi » / « likée » (cf recette AN044/AN046/AN056/AN060).
+    const uid = await getUserId();
+    return NextResponse.json({ ideas: await listIdeas(uid ?? undefined) });
   } catch {
     return NextResponse.json({ error: "Idées indisponibles." }, { status: 500 });
   }
