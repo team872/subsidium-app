@@ -1,7 +1,7 @@
 /* ============ SUBSIDIUM — design system (charte) ============ */
 :root{
   --coral:#F27B6A; --coral-d:#C85A48; --plum:#372646; --mauve:#69567A;
-  --cream:#F9F1E9; --beige:#D7C4BB; --greymauve:#9C919E;
+  --cream:#FCF6EF; --beige:#D7C4BB; --greymauve:#9C919E;
   --paper:#FFFDFB; --line:rgba(55,38,70,.12);
   --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
 }
