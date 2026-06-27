@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 
 type Photo = { id: number; thumb: string; full: string; alt: string; credit: string };
 type Dict = Record<string, string>;
 
 const DICT: Record<string, Dict> = {
-  fr: { ph: "Mots-clés (pré-remplis depuis votre texte)", search: "Rechercher", gen: "✨ Générer (IA)", genBusy: "Génération…", searching: "Recherche…", none: "Aucune image. Essayez d'autres mots-clés.", noKey: "Recherche d'images indisponible (clé Pexels non configurée).", genOff: "Génération IA non configurée (clé fal.ai requise).", genFail: "La génération n'a pas abouti (réessayez ou vérifiez le solde fal.ai).", remove: "Retirer", hint: "Choisissez une photo libre de droit ou générez une illustration." },
-  en: { ph: "Keywords (prefilled from your text)", search: "Search", gen: "✨ Generate (AI)", genBusy: "Generating…", searching: "Searching…", none: "No image. Try other keywords.", noKey: "Image search unavailable (Pexels key not configured).", genOff: "AI generation not configured (fal.ai key required).", genFail: "Generation failed (retry or check your fal.ai balance).", remove: "Remove", hint: "Pick a royalty-free photo or generate an illustration." },
-  it: { ph: "Parole chiave (precompilate dal testo)", search: "Cerca", gen: "✨ Genera (IA)", genBusy: "Generazione…", searching: "Ricerca…", none: "Nessuna immagine. Prova altre parole chiave.", noKey: "Ricerca immagini non disponibile (chiave Pexels non configurata).", genOff: "Generazione IA non configurata (chiave fal.ai richiesta).", genFail: "Generazione non riuscita (riprova o controlla il saldo fal.ai).", remove: "Rimuovi", hint: "Scegli una foto royalty-free o genera un'illustrazione." },
+  fr: { ph: "Mots-clés (pré-remplis depuis votre texte)", search: "Rechercher", gen: "✨ Générer (IA)", genBusy: "Génération…", searching: "Recherche…", none: "Aucune image. Essayez d'autres mots-clés.", noKey: "Recherche d'images indisponible (clé Pexels non configurée).", genOff: "Génération IA non configurée (clé fal.ai requise).", genFail: "La génération n'a pas abouti (réessayez ou vérifiez le solde fal.ai).", remove: "Retirer", hint: "Choisissez une photo libre de droit ou générez une illustration.", theme: "Images du thème" },
+  en: { ph: "Keywords (prefilled from your text)", search: "Search", gen: "✨ Generate (AI)", genBusy: "Generating…", searching: "Searching…", none: "No image. Try other keywords.", noKey: "Image search unavailable (Pexels key not configured).", genOff: "AI generation not configured (fal.ai key required).", genFail: "Generation failed (retry or check your fal.ai balance).", remove: "Remove", hint: "Pick a royalty-free photo or generate an illustration.", theme: "Theme images" },
+  it: { ph: "Parole chiave (precompilate dal testo)", search: "Cerca", gen: "✨ Genera (IA)", genBusy: "Generazione…", searching: "Ricerca…", none: "Nessuna immagine. Prova altre parole chiave.", noKey: "Ricerca immagini non disponibile (chiave Pexels non configurata).", genOff: "Generazione IA non configurata (chiave fal.ai richiesta).", genFail: "Generazione non riuscita (riprova o controlla il saldo fal.ai).", remove: "Rimuovi", hint: "Scegli una foto royalty-free o genera un'illustrazione.", theme: "Immagini del tema" },
 };
 
-export default function ImagePicker({ seed, value, onPick }: { seed: string; value: string | null; onPick: (url: string | null) => void }) {
+// Requête d'images dédiée par thématique d'engagement (recette AN034) :
+// propose des visuels pertinents pour le thème choisi, en un clic.
+const CAT_QUERY: Record<string, string> = {
+  "Mobilité et déplacement": "urban mobility cycling pedestrian street",
+  "Vie de quartier et lien social": "neighborhood community gathering people",
+  "Environnement": "green city nature ecology community",
+  "Solidarité": "solidarity volunteers helping community",
+  "Numérique": "digital inclusion technology training laptop",
+  "Culture et éducation": "culture education library workshop",
+};
+
+export default function ImagePicker({ seed, value, onPick, category }: { seed: string; value: string | null; onPick: (url: string | null) => void; category?: string }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
   const [q, setQ] = useState(seed || "");
@@ -22,19 +33,31 @@ export default function ImagePicker({ seed, value, onPick }: { seed: string; val
   const [genBusy, setGenBusy] = useState(false);
   const [genMsg, setGenMsg] = useState("");
   const [touched, setTouched] = useState(false);
+  const touchedRef = useRef(false);
 
-  async function search() {
-    const query = (q || seed || "").trim();
-    if (!query) return;
-    setLoading(true); setNoKey(false); setTouched(true);
+  async function searchWith(query: string) {
+    const qq = (query || "").trim();
+    if (!qq) return;
+    setQ(qq);
+    setLoading(true); setNoKey(false); setTouched(true); touchedRef.current = true;
     try {
-      const r = await fetch(`/app/api/images/search?q=${encodeURIComponent(query)}`);
+      const r = await fetch(`/app/api/images/search?q=${encodeURIComponent(qq)}`);
       const d = await r.json();
       if (d.configured === false) setNoKey(true);
       setPhotos(d.photos || []);
     } catch {}
     setLoading(false);
   }
+  function search() { searchWith(q || seed); }
+
+  // Quand l'utilisateur choisit une thématique (et qu'il n'a pas encore cherché),
+  // on propose automatiquement des images du thème.
+  const themeQuery = category ? CAT_QUERY[category] : "";
+  useEffect(() => {
+    if (themeQuery && !touchedRef.current) searchWith(themeQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeQuery]);
+
   async function generate() {
     const prompt = (q || seed || "").trim();
     if (!prompt) return;
@@ -58,6 +81,13 @@ export default function ImagePicker({ seed, value, onPick }: { seed: string; val
         <button type="button" className="btn btn-ghost" onClick={search} disabled={loading}>{loading ? tr.searching : tr.search}</button>
         <button type="button" className="btn btn-ghost" onClick={generate} disabled={genBusy} title="FLUX · fal.ai">{genBusy ? tr.genBusy : tr.gen}</button>
       </div>
+
+      {category && CAT_QUERY[category] && (
+        <button type="button" onClick={() => searchWith(CAT_QUERY[category])} disabled={loading}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F9F1E9", border: "1px solid #E3D7CC", borderRadius: 999, padding: "5px 12px", cursor: "pointer", color: "#5E4A73", fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
+          🖼️ {tr.theme} : {category}
+        </button>
+      )}
 
       {value && (
         <div style={{ position: "relative", marginBottom: 8, borderRadius: 12, overflow: "hidden", border: "2px solid #5E8A57" }}>
