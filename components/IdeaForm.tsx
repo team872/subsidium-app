@@ -10,7 +10,7 @@ import { keywordsFromText } from "@/lib/keywords";
 type Dict = Record<string, string>;
 const DICT: Record<string, Dict> = {
   fr: {
-    title: "Exprimer une idée", close: "Fermer",
+    title: "Exprimer une idée", editTitle: "Modifier le brouillon", close: "Fermer",
     fTitle: "Titre de l'idée", phTitle: "Titre",
     fLoc: "Localisation", phLoc: "Nom de ville, département, etc.",
     fCat: "Thématique traitée", select: "Sélectionner",
@@ -21,9 +21,10 @@ const DICT: Record<string, Dict> = {
     pubErr: "Publication impossible.", pubErr2: "Publication impossible pour le moment.",
     needLogin: "Connectez-vous pour publier votre idée.", login: "Se connecter",
     publishing: "Publication…", publish: "Publier",
+    saveDraft: "Enregistrer en brouillon", saving: "Enregistrement…",
   },
   en: {
-    title: "Share an idea", close: "Close",
+    title: "Share an idea", editTitle: "Edit draft", close: "Close",
     fTitle: "Idea title", phTitle: "Title",
     fLoc: "Location", phLoc: "City name, department, etc.",
     fCat: "Topic", select: "Select",
@@ -34,9 +35,10 @@ const DICT: Record<string, Dict> = {
     pubErr: "Could not publish.", pubErr2: "Could not publish for now.",
     needLogin: "Log in to publish your idea.", login: "Log in",
     publishing: "Publishing…", publish: "Publish",
+    saveDraft: "Save as draft", saving: "Saving…",
   },
   it: {
-    title: "Esprimere un'idea", close: "Chiudi",
+    title: "Esprimere un'idea", editTitle: "Modifica bozza", close: "Chiudi",
     fTitle: "Titolo dell'idea", phTitle: "Titolo",
     fLoc: "Localizzazione", phLoc: "Nome della città, dipartimento, ecc.",
     fCat: "Tematica trattata", select: "Seleziona",
@@ -47,6 +49,7 @@ const DICT: Record<string, Dict> = {
     pubErr: "Pubblicazione impossibile.", pubErr2: "Pubblicazione impossibile per ora.",
     needLogin: "Accedi per pubblicare la tua idea.", login: "Accedi",
     publishing: "Pubblicazione…", publish: "Pubblica",
+    saveDraft: "Salva come bozza", saving: "Salvataggio…",
   },
 };
 
@@ -55,14 +58,14 @@ function Req() {
   return <span style={{ color: "#C2452F", fontWeight: 700 }} aria-hidden="true"> *</span>;
 }
 
-export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; onCreated: (idea: IdeaDTO) => void }) {
+export default function IdeaForm({ onClose, onCreated, edit }: { onClose: () => void; onCreated: (idea: IdeaDTO) => void; edit?: IdeaDTO }) {
   const { lang } = useLang();
   const tr = DICT[lang] || DICT.fr;
-  const [title, setTitle] = useState("");
-  const [location, setLocation] = useState("");
-  const [cat, setCat] = useState("");
-  const [desc, setDesc] = useState("");
-  const [image, setImage] = useState<string | null>(null);
+  const [title, setTitle] = useState(edit?.title ?? "");
+  const [location, setLocation] = useState(edit?.location ?? "");
+  const [cat, setCat] = useState(edit?.cat ?? "");
+  const [desc, setDesc] = useState(edit?.desc ?? "");
+  const [image, setImage] = useState<string | null>(edit?.image ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [needLogin, setNeedLogin] = useState(false);
@@ -71,7 +74,8 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
   const missingCat = !!error && !cat;
   const missingDesc = !!error && !desc.trim();
 
-  async function submit() {
+  // publish=false → enregistre / met à jour le brouillon ; publish=true → publie.
+  async function submit(publish: boolean) {
     setError("");
     setNeedLogin(false);
     if (!title.trim() || !cat || !desc.trim()) {
@@ -80,10 +84,13 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
     }
     setBusy(true);
     try {
-      const r = await fetch("/app/api/ideas", {
-        method: "POST",
+      const payload = edit
+        ? { title, cat, desc, location, image, publish }
+        : { title, cat, desc, location, image, status: publish ? "emise" : "brouillon" };
+      const r = await fetch(edit ? `/app/api/ideas/${edit.id}` : "/app/api/ideas", {
+        method: edit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, cat, desc, location, image }),
+        body: JSON.stringify(payload),
       });
       const d = await r.json();
       if (r.status === 401) {
@@ -110,7 +117,7 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>{tr.title}</h2>
+          <h2>{edit ? tr.editTitle : tr.title}</h2>
           <button className="modal-x" onClick={onClose} aria-label={tr.close}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
@@ -152,8 +159,11 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
           )}
         </div>
 
-        <div className="modal-foot">
-          <button className="btn btn-coral" onClick={submit} disabled={busy}>
+        <div className="modal-foot" style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          <button className="btn" onClick={() => submit(false)} disabled={busy} style={{ background: "#fff", color: "#372646", border: "1px solid #E3D7CC" }}>
+            {busy ? tr.saving : tr.saveDraft}
+          </button>
+          <button className="btn btn-coral" onClick={() => submit(true)} disabled={busy}>
             {busy ? tr.publishing : tr.publish}
           </button>
         </div>
