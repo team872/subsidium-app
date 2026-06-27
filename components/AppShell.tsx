@@ -74,9 +74,18 @@ const NAV_LABEL: Record<string, Record<string, string>> = {
   energie: { fr: "Énergie", en: "Energy", it: "Energia" },
 };
 
+// Bandeau « Aperçu » affiché aux visiteurs NON connectés (recette AN049) :
+// la consultation est ouverte sur du contenu de démonstration ; on invite à créer un compte gratuit.
+const APERCU: Record<string, { t: string; d: string; cta: string; login: string }> = {
+  fr: { t: "Aperçu de la plateforme", d: "vous explorez SUBSIDIUM en mode démonstration (contenus d'exemple). Créez un compte gratuit pour participer.", cta: "Créer un compte gratuit", login: "Se connecter" },
+  en: { t: "Platform preview", d: "you're exploring SUBSIDIUM in demo mode (sample content). Create a free account to take part.", cta: "Create a free account", login: "Sign in" },
+  it: { t: "Anteprima della piattaforma", d: "stai esplorando SUBSIDIUM in modalità demo (contenuti di esempio). Crea un account gratuito per partecipare.", cta: "Crea un account gratuito", login: "Accedi" },
+};
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   const [me, setMe] = useState<Me>(null);
+  const [meLoaded, setMeLoaded] = useState(false);
   const [isTest, setIsTest] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -87,8 +96,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetch("/app/api/auth/me")
       .then((r) => r.json())
-      .then((d) => { setMe(d.user || null); setIsTest(!!d.isTest); setIsAdmin(!!d.isAdmin); })
-      .catch(() => {});
+      .then((d) => { setMe(d.user || null); setIsTest(!!d.isTest); setIsAdmin(!!d.isAdmin); setMeLoaded(true); })
+      .catch(() => setMeLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -103,6 +112,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const niveau = clampNiveau(me ? (me.niveau ?? 0) : 0);
   const role = t(`role.${niveau}`);
   const nav = NAV.filter((n) => (n.adminOnly ? isAdmin : niveau >= (n.minNiveau ?? 0)));
+  const ap = APERCU[lang] || APERCU.fr;
 
   async function logout() {
     await fetch("/app/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -178,7 +188,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="content">{children}</main>
+      <main className="content">
+        {meLoaded && !me && (
+          <div role="note" style={{ background: "#FBF4EC", border: "1px solid #EBD9CD", borderLeft: "4px solid #F27B6A", borderRadius: 12, padding: "11px 16px", marginBottom: 18, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span aria-hidden="true" style={{ fontSize: 18 }}>👀</span>
+            <span style={{ color: "#5E4A73", fontSize: 14, flex: "1 1 320px", lineHeight: 1.45 }}>
+              <b style={{ color: "#372646" }}>{ap.t}</b> — {ap.d}
+            </span>
+            <a href="/app/inscription" className="btn btn-coral" style={{ padding: "7px 16px", fontSize: 13 }}>{ap.cta}</a>
+            <a href="/app/connexion" style={{ color: "#C2452F", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>{ap.login}</a>
+          </div>
+        )}
+        {children}
+      </main>
       <TestBar niveau={niveau} isTest={isTest} />
       <Mascotte />
     </div>
