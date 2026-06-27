@@ -108,7 +108,11 @@ export async function listIdeas(userId?: number): Promise<IdeaDTO[]> {
   await ensureImageCols();
   await ensureLikes();
   const uid = userId ?? 0;
-  return query<IdeaDTO>(`${ideaSelect("$1")} ORDER BY i.created_at DESC, i.id DESC`, [uid]);
+  // Les brouillons ne sont visibles que de leur auteur (recette AN053).
+  return query<IdeaDTO>(
+    `${ideaSelect("$1")} WHERE (i.status <> 'brouillon' OR i.author_id = $1) ORDER BY i.created_at DESC, i.id DESC`,
+    [uid]
+  );
 }
 
 export async function getIdea(id: number, userId?: number): Promise<IdeaDTO | null> {
@@ -137,17 +141,41 @@ export async function toggleLike(userId: number, ideaId: number): Promise<{ like
   return { liked, likes: c[0].n };
 }
 
-export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number; location?: string | null; lat?: number | null; lon?: number | null; image?: string | null }): Promise<IdeaDTO> {
+export async function createIdea(d: { cat: string; color: string; title: string; desc: string; author: string; authorId: number; location?: string | null; lat?: number | null; lon?: number | null; image?: string | null; status?: string }): Promise<IdeaDTO> {
   await ensureDb();
   await ensureImageCols();
+  const status = d.status === "brouillon" ? "brouillon" : "emise";
   const rows = await query<IdeaDTO>(
     `INSERT INTO ideas (cat,color,title,descr,author,author_id,status,base_messages,date_label,location,lat,lon,image)
-     VALUES ($1,$2,$3,$4,$5,$6,'emise',0,to_char(now(),'DD/MM'),$7,$8,$9,$10)
+     VALUES ($1,$2,$3,$4,$5,$6,$11,0,to_char(now(),'DD/MM'),$7,$8,$9,$10)
      RETURNING id, cat, color, title, descr AS "desc", author, status, date_label AS "date", location, lat, lon, image, 0 AS messages`,
-    [d.cat, d.color, d.title, d.desc, d.author, d.authorId, d.location ?? null, d.lat ?? null, d.lon ?? null, d.image ?? null]
+    [d.cat, d.color, d.title, d.desc, d.author, d.authorId, d.location ?? null, d.lat ?? null, d.lon ?? null, d.image ?? null, status]
   );
   // Une idée fraîchement créée appartient à son auteur, sans like ni suivi.
   return { ...rows[0], messages: 0, likes: 0, liked: false, following: false, mine: true };
+}
+
+// Édition d'une idée : autorisée UNIQUEMENT par l'auteur ET tant que l'idée est un
+// brouillon (recette AN061 — pas de modification d'une idée déjà publiée/likée/commentée).
+// `publish` à true fait passer le brouillon en idée publiée. Renvoie null si interdit.
+export async function updateIdea(
+  id: number,
+  userId: number,
+  f: { cat: string; color: string; title: string; desc: string; location?: string | null; lat?: number | null; lon?: number | null; image?: string | null },
+  publish: boolean
+): Promise<IdeaDTO | null> {
+  await ensureDb();
+  await ensureImageCols();
+  const own = await query<{ author_id: number | null; status: string | null }>(
+    `SELECT author_id, status FROM ideas WHERE id=$1`, [id]
+  );
+  if (!own[0] || own[0].author_id !== userId || own[0].status !== "brouillon") return null;
+  const newStatus = publish ? "emise" : "brouillon";
+  await query(
+    `UPDATE ideas SET cat=$2, color=$3, title=$4, descr=$5, location=$6, lat=$7, lon=$8, image=$9, status=$10 WHERE id=$1`,
+    [id, f.cat, f.color, f.title, f.desc, f.location ?? null, f.lat ?? null, f.lon ?? null, f.image ?? null, newStatus]
+  );
+  return getIdea(id, userId);
 }
 
 export type AttachmentMeta = { id: number; filename: string; mime: string; size: number; isImage: boolean };
