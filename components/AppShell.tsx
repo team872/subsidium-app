@@ -98,7 +98,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const name = me ? (`${me.prenom ?? ""} ${me.nom ?? ""}`.trim() || me.email) : "—";
-  const niveau = clampNiveau(me?.niveau ?? 1);
+  // Défaut = Visiteur (0) quand l'utilisateur n'est pas connecté / profil introuvable (recette AN040).
+  const niveau = clampNiveau(me ? (me.niveau ?? 0) : 0);
   const role = t(`role.${niveau}`);
   const nav = NAV.filter((n) => (n.adminOnly ? isAdmin : niveau >= (n.minNiveau ?? 0)));
 

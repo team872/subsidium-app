@@ -4,34 +4,69 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
 import Stepper from "@/components/Stepper";
-import type { EvalSummary } from "@/components/AutoEvalChat";
-import EvalFlow from "@/components/EvalFlow";
-import { useT } from "@/components/LangProvider";
+import { useT, useLang } from "@/components/LangProvider";
 
 type Perso = { nom: string; prenom: string; situation: string; ville: string; pays: string };
+
+// Écrans propres au tunnel dissocié : l'inscription crée un VISITEUR INSCRIT.
+// La Charte (→ Refondateur) et l'auto-évaluation (→ Initiateur) sont des étapes ultérieures.
+const LX: Record<string, {
+  emailTaken: string; emailInvalid: string; checking: string;
+  doneTitle: string; doneRole: string; doneP: string; ctaCharte: string; ctaSite: string;
+}> = {
+  fr: {
+    emailTaken: "Un compte existe déjà avec cet e-mail. Connectez-vous ou utilisez une autre adresse.",
+    emailInvalid: "Veuillez saisir une adresse e-mail valide.",
+    checking: "Vérification…",
+    doneTitle: "Bienvenue ! Votre compte est créé.",
+    doneRole: "Vous êtes désormais Visiteur inscrit.",
+    doneP: "Prochaine étape pour passer à l'action : adhérer à la Charte d'engagement et devenir Refondateur. Vous pouvez aussi explorer la plateforme dès maintenant.",
+    ctaCharte: "Adhérer à la Charte",
+    ctaSite: "Explorer la plateforme",
+  },
+  en: {
+    emailTaken: "An account already exists with this e-mail. Sign in or use another address.",
+    emailInvalid: "Please enter a valid e-mail address.",
+    checking: "Checking…",
+    doneTitle: "Welcome! Your account has been created.",
+    doneRole: "You are now a Registered Visitor.",
+    doneP: "Next step to take action: adopt the Charter of Commitment and become a Refounder. You can also explore the platform right now.",
+    ctaCharte: "Adopt the Charter",
+    ctaSite: "Explore the platform",
+  },
+  it: {
+    emailTaken: "Esiste già un account con questa e-mail. Accedi o usa un altro indirizzo.",
+    emailInvalid: "Inserisci un indirizzo e-mail valido.",
+    checking: "Verifica…",
+    doneTitle: "Benvenuto! Il tuo account è stato creato.",
+    doneRole: "Ora sei un Visitatore registrato.",
+    doneP: "Prossimo passo per agire: aderire alla Carta d'impegno e diventare Rifondatore. Puoi anche esplorare la piattaforma fin da subito.",
+    ctaCharte: "Aderire alla Carta",
+    ctaSite: "Esplorare la piattaforma",
+  },
+};
 
 export default function InscriptionPage() {
   const router = useRouter();
   const t = useT();
+  const { lang } = useLang();
+  const L = LX[lang] || LX.fr;
+
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
 
-  // Etape 1
+  // Etape 1 : informations de connexion
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [pwd2, setPwd2] = useState("");
-  // Etape 2
+  // Etape 2 : informations personnelles
   const [perso, setPerso] = useState<Perso>({ nom: "", prenom: "", situation: "", ville: "", pays: "" });
-  // Etape 3 : auto-evaluation (questionnaire ou agent, au choix — facultative)
-  const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
-  // Etape 4
-  const [accepted, setAccepted] = useState(false);
 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   // MODE DEMO : reserve aux comptes de test (meme detection que la barre MODE TEST).
-  // Permet de sauter directement a n'importe quelle etape sans remplir les formulaires.
   const [demo, setDemo] = useState(false);
   useEffect(() => {
     fetch("/app/api/auth/me")
@@ -58,22 +93,29 @@ export default function InscriptionPage() {
     return "";
   }
 
-  function next() {
+  async function next() {
     setError("");
-    if (step === 0) {
-      const e = validStep1();
-      if (e) return setError(e);
+    if (step !== 0) return;
+    const e = validStep1();
+    if (e) return setError(e);
+    // Contrôle PRÉCOCE de disponibilité de l'e-mail (recette AN051).
+    setChecking(true);
+    try {
+      const r = await fetch(`/app/api/auth/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      const d = await r.json();
+      setChecking(false);
+      if (d.valid === false) return setError(L.emailInvalid);
+      if (d.available === false) return setError(L.emailTaken);
+    } catch {
+      setChecking(false);
     }
-    if (step === 1) {
-      const e = validStep2();
-      if (e) return setError(e);
-    }
-    setStep((s) => s + 1);
+    setStep(1);
   }
 
   async function finish() {
     setError("");
-    if (!accepted) return setError(t("insc.s4.err.consent"));
+    const e = validStep2();
+    if (e) return setError(e);
     setBusy(true);
     try {
       const r = await fetch("/app/api/auth/register", {
@@ -87,9 +129,6 @@ export default function InscriptionPage() {
           situation: perso.situation,
           ville: perso.ville,
           pays: perso.pays,
-          palier: evalSummary?.palier ?? null,
-          score: evalSummary?.total ?? null,
-          badge_n2: evalSummary?.badge_n2_octroyable ?? false,
         }),
       });
       const d = await r.json();
@@ -105,10 +144,10 @@ export default function InscriptionPage() {
     }
   }
 
-  // Barre flottante MODE DEMO (comptes test uniquement).
+  // Barre flottante MODE DEMO (comptes test uniquement) — 2 étapes.
   function DemoBar() {
     if (!demo || done) return null;
-    const labels = [t("insc.step1"), t("insc.step2"), t("insc.step3"), t("insc.step4")];
+    const labels = [t("insc.step1"), t("insc.step2")];
     return (
       <div
         style={{
@@ -123,7 +162,7 @@ export default function InscriptionPage() {
       >
         <strong style={{ letterSpacing: ".07em", fontSize: 10.5, opacity: 0.75 }}>MODE DÉMO</strong>
         <span style={{ fontSize: 10.5, opacity: 0.6 }}>PASSER À L'ÉTAPE</span>
-        {[0, 1, 2, 3].map((i) => {
+        {[0, 1].map((i) => {
           const activeStep = step === i;
           return (
             <button
@@ -150,24 +189,26 @@ export default function InscriptionPage() {
   if (done) {
     return (
       <AuthShell wide>
-        <Stepper current={4} />
+        <Stepper current={2} total={2} />
         <div className="done-wrap">
           <div className="done-check" aria-hidden="true">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 6L9 17l-5-5" />
             </svg>
           </div>
-          <h2>{t("insc.done.title")}</h2>
-          {evalSummary && (
-            <p className="done-palier">
-              {t("insc.done.palier")} <b>{evalSummary.palier}</b> · {evalSummary.total}/60
-              {evalSummary.badge_n2_octroyable ? ` · ${t("insc.done.badge")}` : ""}
-            </p>
-          )}
-          <p>{t("insc.done.p")}</p>
-          <button className="btn btn-coral" onClick={() => router.push("/accueil")}>
-            {t("insc.done.cta")}
-          </button>
+          <h2>{L.doneTitle}</h2>
+          <p className="done-palier"><b>{L.doneRole}</b></p>
+          <p>{L.doneP}</p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 6 }}>
+            <button className="btn btn-coral" onClick={() => router.push("/charte")}>{L.ctaCharte}</button>
+            <button
+              className="btn"
+              onClick={() => router.push("/accueil")}
+              style={{ background: "#fff", color: "#372646", border: "1px solid #E3D7CC" }}
+            >
+              {L.ctaSite}
+            </button>
+          </div>
         </div>
       </AuthShell>
     );
@@ -182,9 +223,9 @@ export default function InscriptionPage() {
         </button>
       </div>
 
-      <Stepper current={step} />
+      <Stepper current={step} total={2} />
 
-      {/* ---------- Etape 1 ---------- */}
+      {/* ---------- Etape 1 : informations de connexion ---------- */}
       {step === 0 && (
         <>
           <h1 className="h-form">{t("insc.s1.title")}</h1>
@@ -206,7 +247,7 @@ export default function InscriptionPage() {
         </>
       )}
 
-      {/* ---------- Etape 2 ---------- */}
+      {/* ---------- Etape 2 : informations personnelles ---------- */}
       {step === 1 && (
         <>
           <h1 className="h-form">{t("insc.s2.title")}</h1>
@@ -253,72 +294,11 @@ export default function InscriptionPage() {
         </>
       )}
 
-      {/* ---------- Etape 3 : auto-evaluation au choix (facultative) ---------- */}
-      {step === 2 && (
-        <>
-          <h1 className="h-form">{t("insc.s3.title")}</h1>
-          <p className="sub">{t("insc.s3.p1")}</p>
-          <p className="sub">{t("insc.s3.p2")}</p>
-
-          <EvalFlow onResult={setEvalSummary} onSkip={() => setStep(3)} />
-
-          <div
-            style={{
-              marginTop: 18,
-              background: "#FBF4EC",
-              border: "1px solid #EBD9CD",
-              borderLeft: "4px solid #F27B6A",
-              borderRadius: 12,
-              padding: "14px 18px",
-            }}
-          >
-            <p style={{ margin: "0 0 6px", fontWeight: 700, color: "#372646" }}>
-              {t("insc.s3.next.title")}
-            </p>
-            <p style={{ margin: "0 0 8px", color: "#5E4A73" }}>
-              {t("insc.s3.next.p")}
-            </p>
-            <ul style={{ margin: 0, paddingLeft: 20, color: "#5E4A73" }}>
-              <li>{t("insc.s3.next.b1")}</li>
-              <li>{t("insc.s3.next.b2")}</li>
-              <li>{t("insc.s3.next.b3")}</li>
-              <li>{t("insc.s3.next.b4")}</li>
-            </ul>
-          </div>
-        </>
-      )}
-
-      {/* ---------- Etape 4 : charte ---------- */}
-      {step === 3 && (
-        <>
-          <h1 className="h-form">{t("insc.s4.title")}</h1>
-          <p className="sub">{t("insc.s4.sub")}</p>
-          <div className="charter">
-            <p>{t("insc.s4.body1")}</p>
-            <h4>{t("insc.s4.commit")}</h4>
-            <p>{t("insc.s4.body2")}</p>
-            <p className="muted" style={{ color: "var(--greymauve)", fontSize: ".82rem" }}>
-              {t("insc.s4.note")}
-            </p>
-          </div>
-          <label className="consent">
-            <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-            <span>{t("insc.s4.consent")}</span>
-          </label>
-        </>
-      )}
-
       {error && <p className="msg" style={{ marginTop: 8 }}>{error}</p>}
 
       <div className="actions-end" style={{ marginTop: 22 }}>
-        {step === 0 && <button className="btn btn-coral" onClick={next}>{t("insc.validate")}</button>}
-        {step === 1 && <button className="btn btn-coral" onClick={next}>{t("insc.validate")}</button>}
-        {step === 2 && (
-          <button className="btn btn-coral" onClick={() => setStep(3)}>
-            {evalSummary ? t("insc.continueCharte") : t("insc.skipContinueCharte")}
-          </button>
-        )}
-        {step === 3 && <button className="btn btn-coral" onClick={finish} disabled={busy}>{busy ? t("insc.s4.busy") : t("insc.s4.cta")}</button>}
+        {step === 0 && <button className="btn btn-coral" onClick={next} disabled={checking}>{checking ? L.checking : t("insc.validate")}</button>}
+        {step === 1 && <button className="btn btn-coral" onClick={finish} disabled={busy}>{busy ? t("insc.s4.busy") : t("insc.validate")}</button>}
       </div>
 
       <DemoBar />
