@@ -62,6 +62,24 @@ const GLYPH: Record<string, string> = {
 };
 function glyph(tag: string) { return GLYPH[tag] || "📍"; }
 
+// --- Date des événements (jour + mois, sans année) — recette AN039 ---
+const MONTH_IDX: Record<string, number> = { JANV: 0, FEVR: 1, MARS: 2, AVR: 3, MAI: 4, JUIN: 5, JUIL: 6, AOUT: 7, SEPT: 8, OCT: 9, NOV: 10, DEC: 11 };
+// Tolérant aux accents et aux points (« DÉC. », « SEPT », « Févr. »…).
+function monthIndex(m: string): number | null {
+  const k = (m || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z]/g, "");
+  if (k in MONTH_IDX) return MONTH_IDX[k];
+  const k3 = k.slice(0, 3);
+  const hit = Object.keys(MONTH_IDX).find((x) => x.startsWith(k3) || k.startsWith(x.slice(0, 3)));
+  return hit ? MONTH_IDX[hit] : null;
+}
+// Date comparable (année courante). null si la date n'est pas analysable → l'événement est conservé.
+function eventTime(ev: EventDTO): number | null {
+  const mi = monthIndex(ev.month);
+  const d = parseInt(ev.day, 10);
+  if (mi === null || !Number.isFinite(d)) return null;
+  return new Date(new Date().getFullYear(), mi, d).getTime();
+}
+
 function phStyle(ev: EventDTO): React.CSSProperties {
   if (ev.image) {
     return {
@@ -158,14 +176,28 @@ export default function EvenementsPage() {
   }, []);
 
   const list = useMemo(() => {
-    return items.filter((ev) => {
-      if (tag !== "Tout afficher" && ev.tag !== tag) return false;
-      if (query) {
-        const q = query.toLowerCase();
-        if (!ev.title.toLowerCase().includes(q) && !ev.desc.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+    const today = t0.getTime();
+    return items
+      .filter((ev) => {
+        if (tag !== "Tout afficher" && ev.tag !== tag) return false;
+        if (query) {
+          const q = query.toLowerCase();
+          if (!ev.title.toLowerCase().includes(q) && !ev.desc.toLowerCase().includes(q)) return false;
+        }
+        // Masquer les événements dont la date est déjà passée (recette AN039).
+        const et = eventTime(ev);
+        if (et !== null && et < today) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const ta = eventTime(a);
+        const tb = eventTime(b);
+        if (ta === null && tb === null) return 0;
+        if (ta === null) return 1;
+        if (tb === null) return -1;
+        return ta - tb;
+      });
   }, [items, query, tag]);
 
   const points = useMemo(() => {
