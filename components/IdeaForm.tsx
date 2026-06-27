@@ -17,6 +17,7 @@ const DICT: Record<string, Dict> = {
     fDesc: "Description", phDesc: "Description",
     fImages: "Ajouter une image",
     reqFields: "Titre, thématique et description sont requis.",
+    reqNote: "Les champs marqués * sont obligatoires.",
     pubErr: "Publication impossible.", pubErr2: "Publication impossible pour le moment.",
     needLogin: "Connectez-vous pour publier votre idée.", login: "Se connecter",
     publishing: "Publication…", publish: "Publier",
@@ -29,6 +30,7 @@ const DICT: Record<string, Dict> = {
     fDesc: "Description", phDesc: "Description",
     fImages: "Add an image",
     reqFields: "Title, topic and description are required.",
+    reqNote: "Fields marked * are required.",
     pubErr: "Could not publish.", pubErr2: "Could not publish for now.",
     needLogin: "Log in to publish your idea.", login: "Log in",
     publishing: "Publishing…", publish: "Publish",
@@ -41,11 +43,17 @@ const DICT: Record<string, Dict> = {
     fDesc: "Descrizione", phDesc: "Descrizione",
     fImages: "Aggiungi un'immagine",
     reqFields: "Titolo, tematica e descrizione sono obbligatori.",
+    reqNote: "I campi contrassegnati con * sono obbligatori.",
     pubErr: "Pubblicazione impossibile.", pubErr2: "Pubblicazione impossibile per ora.",
     needLogin: "Accedi per pubblicare la tua idea.", login: "Accedi",
     publishing: "Pubblicazione…", publish: "Pubblica",
   },
 };
+
+// Marqueur de champ obligatoire.
+function Req() {
+  return <span style={{ color: "#C2452F", fontWeight: 700 }} aria-hidden="true"> *</span>;
+}
 
 export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; onCreated: (idea: IdeaDTO) => void }) {
   const { lang } = useLang();
@@ -58,6 +66,10 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [needLogin, setNeedLogin] = useState(false);
+
+  const missingTitle = !!error && !title.trim();
+  const missingCat = !!error && !cat;
+  const missingDesc = !!error && !desc.trim();
 
   async function submit() {
     setError("");
@@ -92,6 +104,7 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
   }
 
   const seed = keywordsFromText(title, desc) || title.trim();
+  const errStyle = { borderColor: "#C2452F" } as const;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -105,16 +118,16 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
 
         <div className="modal-body">
           <div className="mfield">
-            <label>{tr.fTitle}</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr.phTitle} />
+            <label>{tr.fTitle}<Req /></label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr.phTitle} style={missingTitle ? errStyle : undefined} />
           </div>
           <div className="mfield">
             <label>{tr.fLoc}</label>
             <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={tr.phLoc} />
           </div>
           <div className="mfield">
-            <label>{tr.fCat}</label>
-            <select value={cat} onChange={(e) => setCat(e.target.value)}>
+            <label>{tr.fCat}<Req /></label>
+            <select value={cat} onChange={(e) => setCat(e.target.value)} style={missingCat ? errStyle : undefined}>
               <option value="">{tr.select}</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -122,8 +135,8 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
             </select>
           </div>
           <div className="mfield">
-            <label>{tr.fDesc}</label>
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={tr.phDesc} rows={4} />
+            <label>{tr.fDesc}<Req /></label>
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={tr.phDesc} rows={4} style={missingDesc ? errStyle : undefined} />
           </div>
           <div className="mfield">
             <label>{tr.fImages}</label>
@@ -134,7 +147,9 @@ export default function IdeaForm({ onClose, onCreated }: { onClose: () => void; 
             <p className="msg">{tr.needLogin} <a href="/app/connexion">{tr.login}</a></p>
           ) : error ? (
             <p className="msg">{error}</p>
-          ) : null}
+          ) : (
+            <p style={{ color: "#9C919E", fontSize: 12, margin: "4px 0 0" }}>{tr.reqNote}</p>
+          )}
         </div>
 
         <div className="modal-foot">
