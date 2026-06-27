@@ -1,7 +1,7 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useLang } from "@/components/LangProvider";
@@ -19,13 +19,21 @@ function pinIcon(color: string) {
   });
 }
 
+// Recadre la carte UNE SEULE FOIS, au premier rendu où des points existent.
+// Les changements de filtre mettent à jour les marqueurs sans re-zoomer brutalement
+// (recette AN045 « la carte donne le tournis » / AN047 « la carte passe en anglais »,
+//  les deux dûs au refit + rechargement de tuiles à chaque frappe).
 function FitBounds({ points }: { points: CartePoint[] }) {
   const map = useMap();
+  const done = useRef(false);
   useEffect(() => {
-    if (points.length === 1) { map.setView([points[0].lat, points[0].lon], 12); return; }
-    if (points.length > 1) {
+    if (done.current || points.length === 0) return;
+    if (points.length === 1) {
+      map.setView([points[0].lat, points[0].lon], 12);
+    } else {
       map.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lon] as [number, number])), { padding: [40, 40], maxZoom: 13 });
     }
+    done.current = true;
   }, [points, map]);
   return null;
 }
