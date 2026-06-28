@@ -16,7 +16,7 @@ const DICT: Record<string, Dict> = {
     fCat: "Thématique traitée", select: "Sélectionner",
     fDesc: "Description", phDesc: "Description",
     fImages: "Ajouter une image",
-    reqFields: "Titre, thématique et description sont requis.",
+    reqFields: "Titre, thématique, description et localisation sont requis.",
     reqNote: "Les champs marqués * sont obligatoires.",
     pubErr: "Publication impossible.", pubErr2: "Publication impossible pour le moment.",
     needLogin: "Connectez-vous pour publier votre idée.", login: "Se connecter",
@@ -30,7 +30,7 @@ const DICT: Record<string, Dict> = {
     fCat: "Topic", select: "Select",
     fDesc: "Description", phDesc: "Description",
     fImages: "Add an image",
-    reqFields: "Title, topic and description are required.",
+    reqFields: "Title, topic, description and location are required.",
     reqNote: "Fields marked * are required.",
     pubErr: "Could not publish.", pubErr2: "Could not publish for now.",
     needLogin: "Log in to publish your idea.", login: "Log in",
@@ -44,7 +44,7 @@ const DICT: Record<string, Dict> = {
     fCat: "Tematica trattata", select: "Seleziona",
     fDesc: "Descrizione", phDesc: "Descrizione",
     fImages: "Aggiungi un'immagine",
-    reqFields: "Titolo, tematica e descrizione sono obbligatori.",
+    reqFields: "Titolo, tematica, descrizione e localizzazione sono obbligatori.",
     reqNote: "I campi contrassegnati con * sono obbligatori.",
     pubErr: "Pubblicazione impossibile.", pubErr2: "Pubblicazione impossibile per ora.",
     needLogin: "Accedi per pubblicare la tua idea.", login: "Accedi",
@@ -73,12 +73,13 @@ export default function IdeaForm({ onClose, onCreated, edit }: { onClose: () => 
   const missingTitle = !!error && !title.trim();
   const missingCat = !!error && !cat;
   const missingDesc = !!error && !desc.trim();
+  const missingLoc = !!error && !location.trim();
 
   // publish=false → enregistre / met à jour le brouillon ; publish=true → publie.
   async function submit(publish: boolean) {
     setError("");
     setNeedLogin(false);
-    if (!title.trim() || !cat || !desc.trim()) {
+    if (!title.trim() || !cat || !desc.trim() || !location.trim()) {
       setError(tr.reqFields);
       return;
     }
@@ -129,8 +130,8 @@ export default function IdeaForm({ onClose, onCreated, edit }: { onClose: () => 
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr.phTitle} style={missingTitle ? errStyle : undefined} />
           </div>
           <div className="mfield">
-            <label>{tr.fLoc}</label>
-            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={tr.phLoc} />
+            <label>{tr.fLoc}<Req /></label>
+            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={tr.phLoc} style={missingLoc ? errStyle : undefined} />
           </div>
           <div className="mfield">
             <label>{tr.fCat}<Req /></label>
