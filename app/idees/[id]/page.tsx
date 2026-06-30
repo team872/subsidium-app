@@ -44,6 +44,7 @@ export default function IdeaDetailPage() {
   const [backHref, setBackHref] = useState("/idees");
   const [niveau, setNiveau] = useState(0);
   const [porting, setPorting] = useState(false);
+  const [liking, setLiking] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -80,6 +81,26 @@ export default function IdeaDetailPage() {
       return;
     }
     setFollowing(!!d.following);
+  }
+
+  // Soutenir / retirer le soutien (« j'aime ») — ouvert à tout compte connecté (AN056).
+  async function like() {
+    if (liking) return;
+    setLiking(true);
+    setError("");
+    try {
+      const r = await fetch(`/app/api/ideas/${id}/like`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) {
+        setError(d.error || "Action impossible.");
+        setLiking(false);
+        return;
+      }
+      setIdea((cur) => (cur ? { ...cur, liked: !!d.liked, likes: Number(d.likes ?? cur.likes) } : cur));
+    } catch {
+      setError("Action impossible.");
+    }
+    setLiking(false);
   }
 
   // Passerelle : transformer cette idée (opportunité) en projet + Work Room.
@@ -197,11 +218,15 @@ export default function IdeaDetailPage() {
             </div>
             <p className="txt">{idea.desc} Les habitants du quartier soutiennent cette initiative et souhaitent la construire avec la collectivité, étape par étape, en s'appuyant sur des exemples concrets vécus sur le terrain.</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+              <button className="btn btn-ghost" onClick={like} disabled={liking} title="Soutenir cette idée">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={idea.liked ? "#E0654E" : "none"} stroke={idea.liked ? "#E0654E" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "-2px", marginRight: 6 }}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                {idea.liked ? "Soutenue" : "Soutenir"}{idea.likes ? ` · ${idea.likes}` : ""}
+              </button>
               <button className={following ? "btn btn-ghost" : "btn btn-coral"} onClick={toggleFollow}>
                 {following ? "Idée suivie ✓" : "Suivre l'idée"}
               </button>
               {projetId ? (
-                <Link href={`/projets/${projetId}`} className="btn btn-ghost">Projet en cours — voir le projet →</Link>
+                <Link href={`/projets/${projetId}`} className="btn btn-coral">Projet en cours — voir le projet →</Link>
               ) : niveau >= 2 ? (
                 <button className="btn btn-coral" onClick={porter} disabled={porting} title="Transformer cette idée en projet (Opportunité → Projet → Work Room)">
                   {porting ? "Création du projet…" : "Porter ce projet →"}
