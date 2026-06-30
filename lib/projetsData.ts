@@ -108,6 +108,43 @@ export async function createProjet(ownerId: number, f: { title: string; theme?: 
   await query(`INSERT INTO projet_membres (projet_id,user_id,role) VALUES ($1,$2,'owner') ON CONFLICT DO NOTHING`, [id, ownerId]);
   return id;
 }
+
+// --- Passerelle « Porter ce projet » : transformer une idée (opportunité) en projet. ---
+// Doctrine SUBSIDIUM : Opportunité => Projet => Work Room Initiateur (Blueprint §4.12.3).
+// Réservé aux Initiateurs (contrôle de niveau dans la route API).
+async function ensurePasserelle(): Promise<void> {
+  await ensureProjets();
+  await query(`ALTER TABLE projets ADD COLUMN IF NOT EXISTS origin_idea_id INT`);
+  await query(`ALTER TABLE ideas ADD COLUMN IF NOT EXISTS projet_id INT`);
+}
+
+// Renvoie l'id du projet issu d'une idée (si elle a déjà été portée), sinon null.
+export async function getIdeaProjet(ideaId: number): Promise<number | null> {
+  await ensurePasserelle();
+  const rows = await query<{ projet_id: number | null }>(`SELECT projet_id FROM ideas WHERE id=$1`, [ideaId]);
+  return rows[0]?.projet_id ?? null;
+}
+
+// Transforme l'idée en projet (idempotent : renvoie le projet existant si déjà porté).
+export async function porterIdeeEnProjet(ownerId: number, ideaId: number): Promise<{ projetId: number; already: boolean } | null> {
+  await ensurePasserelle();
+  const rows = await query<{ id: number; title: string; descr: string | null; cat: string | null; location: string | null; image: string | null; projet_id: number | null }>(
+    `SELECT id, title, descr, cat, location, image, projet_id FROM ideas WHERE id=$1`, [ideaId]);
+  const idea = rows[0];
+  if (!idea) return null;
+  if (idea.projet_id) return { projetId: idea.projet_id, already: true };
+  const ins = await query<{ id: number }>(
+    `INSERT INTO projets (title,theme,descr,lieu,prive,owner_id,image,origin_idea_id)
+     VALUES ($1,$2,$3,$4,FALSE,$5,$6,$7) RETURNING id`,
+    [idea.title, idea.cat || null, idea.descr || null, idea.location || null, ownerId, idea.image || null, ideaId]);
+  const projetId = ins[0].id;
+  await query(`INSERT INTO projet_membres (projet_id,user_id,role) VALUES ($1,$2,'owner') ON CONFLICT DO NOTHING`, [projetId, ownerId]);
+  await query(`UPDATE ideas SET projet_id=$2 WHERE id=$1`, [ideaId, projetId]);
+  await query(`INSERT INTO projet_posts (projet_id,author_id,corps) VALUES ($1,$2,$3)`,
+    [projetId, ownerId, `Projet porté à partir de l'idée « ${idea.title} ».`]).catch(() => {});
+  return { projetId, already: false };
+}
+
 export async function getMembership(projetId: number, userId: number): Promise<string | null> {
   await ensureProjets();
   const rows = await query<{ role: string }>(`SELECT role FROM projet_membres WHERE projet_id=$1 AND user_id=$2`, [projetId, userId]);
