@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import type { IdeaDTO, CommentDTO } from "@/lib/data";
 import "@/components/MemberBoards.css";
@@ -30,6 +30,7 @@ function fileToB64(file: File): Promise<string> {
 
 export default function IdeaDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = Number(params?.id);
 
   const [idea, setIdea] = useState<IdeaDTO | null>(null);
@@ -41,11 +42,21 @@ export default function IdeaDetailPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [backHref, setBackHref] = useState("/idees");
+  const [niveau, setNiveau] = useState(0);
+  const [porting, setPorting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const v = new URLSearchParams(window.location.search).get("vue");
     if (v === "liste" || v === "carte") setBackHref(`/idees?vue=${v}`);
+  }, []);
+
+  // Niveau de l'utilisateur courant (pour proposer « Porter ce projet » aux Initiateurs).
+  useEffect(() => {
+    fetch("/app/api/me")
+      .then((r) => r.json())
+      .then((d) => setNiveau(Number(d?.user?.niveau ?? 0)))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -69,6 +80,26 @@ export default function IdeaDetailPage() {
       return;
     }
     setFollowing(!!d.following);
+  }
+
+  // Passerelle : transformer cette idée (opportunité) en projet + Work Room.
+  async function porter() {
+    if (porting) return;
+    setPorting(true);
+    setError("");
+    try {
+      const r = await fetch(`/app/api/ideas/${id}/porter`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) {
+        setError(d.error || "Transformation impossible.");
+        setPorting(false);
+        return;
+      }
+      router.push(`/projets/${d.projetId}`);
+    } catch {
+      setError("Transformation impossible.");
+      setPorting(false);
+    }
   }
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -136,6 +167,8 @@ export default function IdeaDetailPage() {
     );
   }
 
+  const projetId: number | null = ((idea as unknown as { projet_id?: number | null }).projet_id) ?? null;
+
   return (
     <AppShell>
       <Link href={backHref} className="board-back">
@@ -163,9 +196,18 @@ export default function IdeaDetailPage() {
               <span>· {idea.messages} messages</span>
             </div>
             <p className="txt">{idea.desc} Les habitants du quartier soutiennent cette initiative et souhaitent la construire avec la collectivité, étape par étape, en s'appuyant sur des exemples concrets vécus sur le terrain.</p>
-            <button className={following ? "btn btn-ghost" : "btn btn-coral"} onClick={toggleFollow}>
-              {following ? "Idée suivie ✓" : "Suivre l'idée"}
-            </button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+              <button className={following ? "btn btn-ghost" : "btn btn-coral"} onClick={toggleFollow}>
+                {following ? "Idée suivie ✓" : "Suivre l'idée"}
+              </button>
+              {projetId ? (
+                <Link href={`/projets/${projetId}`} className="btn btn-ghost">Projet en cours — voir le projet →</Link>
+              ) : niveau >= 2 ? (
+                <button className="btn btn-coral" onClick={porter} disabled={porting} title="Transformer cette idée en projet (Opportunité → Projet → Work Room)">
+                  {porting ? "Création du projet…" : "Porter ce projet →"}
+                </button>
+              ) : null}
+            </div>
             {error && <p className="msg" style={{ marginTop: 12 }}>{error}</p>}
           </div>
         </section>
