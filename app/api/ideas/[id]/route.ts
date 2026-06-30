@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { getIdea, listComments, isFollowing, updateIdea } from "@/lib/data";
+import { getIdeaProjet } from "@/lib/projetsData";
 import { CAT_COLOR } from "@/lib/feed";
 import { geocode } from "@/lib/geo";
 
@@ -20,7 +21,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     }
     const comments = await listComments(id);
     const following = uid ? await isFollowing(uid, id) : false;
-    return NextResponse.json({ idea, comments, following });
+    // Passerelle : si l'idée a déjà été portée en projet, on expose le lien.
+    const projetId = await getIdeaProjet(id);
+    return NextResponse.json({ idea: { ...idea, projet_id: projetId }, comments, following });
   } catch {
     return NextResponse.json({ error: "Idée indisponible." }, { status: 500 });
   }
