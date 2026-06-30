@@ -118,6 +118,29 @@ export async function getOrganisation(id: number): Promise<OrgDTO | null> {
   const rows = await query<any>(`${SELECT} WHERE id=$1`, [id]);
   return rows[0] ? mapOrg(rows[0]) : null;
 }
+
+// --- Visibilité restreinte (visiteur non payé) ---
+// Le contenu « officiel Subsidium » est celui sans propriétaire (seed) : owner_id IS NULL.
+// Le contenu créé par un membre a un owner_id : il n'est PAS exposé au visiteur.
+// On masque en plus les détails exploitables (adresse, contacts, KPIs) et on tronque la description.
+export function maskOrg(o: OrgDTO): OrgDTO {
+  const d = o.desc || "";
+  return {
+    ...o, adresse: null, telephone: null, email: null, site: null, budget: null, benevoles: null,
+    desc: d.length > 160 ? d.slice(0, 160).replace(/\s+\S*$/, "") + "…" : d,
+  };
+}
+export async function listOrganisationsVisitor(limit: number): Promise<OrgDTO[]> {
+  await ensureOrg();
+  const rows = await query<any>(`${SELECT} WHERE labellisee = TRUE AND owner_id IS NULL ORDER BY name ASC LIMIT $1`, [limit]);
+  return rows.map(mapOrg).map(maskOrg);
+}
+export async function countOrganisationsLabellisees(): Promise<number> {
+  await ensureOrg();
+  const r = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM organisations WHERE labellisee = TRUE`);
+  return r[0].n;
+}
+
 export async function createOrganisation(
   ownerId: number,
   f: { name: string; type: string; region?: string; desc?: string; adresse?: string; telephone?: string; email?: string; site?: string; image?: string | null }
