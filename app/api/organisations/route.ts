@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
-import { listOrganisations, createOrganisation } from "@/lib/orgData";
+import { listOrganisations, createOrganisation, listOrganisationsVisitor, countOrganisationsLabellisees } from "@/lib/orgData";
+import { isRestrictedVisitor, VISITOR_SAMPLE } from "@/lib/visitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,15 @@ export async function GET() {
   const uid = await getUserId();
   if (!uid) return NextResponse.json({ error: "Connexion requise." }, { status: 401 });
   try {
-    return NextResponse.json({ organisations: await listOrganisations(true) });
+    // Visiteur non payé : uniquement quelques organisations officielles, sans détails exploitables.
+    if (await isRestrictedVisitor()) {
+      const [organisations, total] = await Promise.all([
+        listOrganisationsVisitor(VISITOR_SAMPLE),
+        countOrganisationsLabellisees(),
+      ]);
+      return NextResponse.json({ organisations, restricted: true, total });
+    }
+    return NextResponse.json({ organisations: await listOrganisations(true), restricted: false });
   } catch {
     return NextResponse.json({ error: "Annuaire indisponible." }, { status: 500 });
   }
@@ -18,6 +27,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const uid = await getUserId();
   if (!uid) return NextResponse.json({ error: "Connexion requise." }, { status: 401 });
+  // Créer une organisation est réservé aux membres (adhésion réglée), pas aux visiteurs.
+  if (await isRestrictedVisitor()) {
+    return NextResponse.json({ error: "Réservé aux membres : finalisez votre adhésion." }, { status: 403 });
+  }
   const b = await req.json().catch(() => ({}));
   const name = String(b.name || "").trim();
   const type = String(b.type || "").trim();
