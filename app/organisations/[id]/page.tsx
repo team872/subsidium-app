@@ -27,6 +27,7 @@ export default function OrgDetailPage() {
   const id = Number(params?.id);
   const [org, setOrg] = useState<Org | null>(null);
   const [loading, setLoading] = useState(true);
+  const [locked, setLocked] = useState(false);
   const [pubs, setPubs] = useState<Pub[]>([]);
   const [isMember, setIsMember] = useState(false);
   const [kind, setKind] = useState<"proposition" | "reussite">("proposition");
@@ -42,7 +43,7 @@ export default function OrgDetailPage() {
   }, []);
 
   useEffect(() => {
-    fetch(`/app/api/organisations/${id}`).then((r) => r.json()).then((d) => setOrg(d.org || null)).catch(() => setOrg(null)).finally(() => setLoading(false));
+    fetch(`/app/api/organisations/${id}`).then((r) => r.json()).then((d) => { if (d && d.locked) setLocked(true); else setOrg(d.org || null); }).catch(() => setOrg(null)).finally(() => setLoading(false));
     fetch(`/app/api/organisations/${id}/publications`).then((r) => r.json()).then((d) => setPubs(d.publications || [])).catch(() => {});
     fetch(`/app/api/organisations/mine`).then((r) => r.json()).then((d) => setIsMember((d.organisations || []).some((o: any) => o.id === id))).catch(() => {});
   }, [id]);
@@ -63,6 +64,25 @@ export default function OrgDetailPage() {
   }
 
   if (loading) return <AppShell><Link href={backHref} className="board-back">← Organisations</Link><p className="board-empty">Chargement…</p></AppShell>;
+
+  // Visiteur non payé : fiche verrouillée → mur d'adhésion.
+  if (locked) return (
+    <AppShell>
+      <Link href={backHref} className="board-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>
+        Annuaire des organisations
+      </Link>
+      <div style={{ maxWidth: 560, margin: "40px auto", textAlign: "center", border: "1px solid #EBD9CD", borderRadius: 18, padding: "40px 28px", background: "#FCF9F6" }}>
+        <div style={{ fontSize: 40 }}>🔒</div>
+        <h1 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "10px 0 8px" }}>Fiche réservée aux membres</h1>
+        <p style={{ color: "#5E4A73", lineHeight: 1.6, margin: "0 auto 22px", maxWidth: 420 }}>
+          Adhérez à Subsidium pour accéder à la fiche complète — coordonnées, équipe, propositions et réussites — et pour entrer en relation avec l'organisation.
+        </p>
+        <Link href="/charte" className="btn btn-coral">Adhérer pour accéder</Link>
+      </div>
+    </AppShell>
+  );
+
   if (!org) return <AppShell><Link href={backHref} className="board-back">← Organisations</Link><p className="board-empty">Organisation introuvable.</p></AppShell>;
 
   return (
