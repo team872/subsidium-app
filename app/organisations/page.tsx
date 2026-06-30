@@ -30,6 +30,7 @@ const DICT: Record<string, Dict> = {
     phDesc: "Présentez la mission de votre organisation…",
     note: "Votre organisation sera soumise à labellisation par Subsidium avant d'apparaître dans l'annuaire.", close: "Fermer",
     tAssoc: "Association", tPublic: "Établissement public", tColl: "Collectivité territoriale", tEnt: "Entreprise", tAutre: "Autre",
+    teaser: "Aperçu Visiteur : vous voyez quelques organisations d'exemple. Adhérez pour accéder à l'annuaire complet, aux coordonnées et aux fiches détaillées.", join: "Adhérer pour tout voir",
   },
   en: {
     title: "Accredited organisations", create: "Create an organisation", mine: "My organisations",
@@ -42,6 +43,7 @@ const DICT: Record<string, Dict> = {
     phDesc: "Describe your organisation's mission…",
     note: "Your organisation will be submitted for accreditation by Subsidium before appearing in the directory.", close: "Close",
     tAssoc: "Nonprofit", tPublic: "Public institution", tColl: "Local authority", tEnt: "Company", tAutre: "Other",
+    teaser: "Visitor preview: you see a few sample organisations. Join to access the full directory, contact details and full profiles.", join: "Join to see everything",
   },
   it: {
     title: "Organizzazioni accreditate", create: "Crea un'organizzazione", mine: "Le mie organizzazioni",
@@ -54,6 +56,7 @@ const DICT: Record<string, Dict> = {
     phDesc: "Presenta la missione della tua organizzazione…",
     note: "La tua organizzazione sarà sottoposta ad accreditamento da Subsidium prima di apparire nell'elenco.", close: "Chiudi",
     tAssoc: "Associazione", tPublic: "Ente pubblico", tColl: "Ente locale", tEnt: "Azienda", tAutre: "Altro",
+    teaser: "Anteprima Visitatore: vedi alcune organizzazioni di esempio. Aderisci per accedere all'elenco completo, ai contatti e alle schede dettagliate.", join: "Aderisci per vedere tutto",
   },
 };
 
@@ -108,6 +111,8 @@ export default function OrganisationsPage() {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [mine, setMine] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restricted, setRestricted] = useState(false);
+  const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [view, setView] = useState<"liste" | "carte">("liste");
@@ -129,7 +134,7 @@ export default function OrganisationsPage() {
   }
 
   useEffect(() => {
-    fetch("/app/api/organisations").then((r) => r.json()).then((d) => setOrgs(d.organisations || [])).catch(() => {}).finally(() => setLoading(false));
+    fetch("/app/api/organisations").then((r) => r.json()).then((d) => { setOrgs(d.organisations || []); setRestricted(!!d.restricted); setTotal(Number(d.total ?? 0)); }).catch(() => {}).finally(() => setLoading(false));
     fetch("/app/api/organisations/mine").then((r) => r.json()).then((d) => setMine(d.organisations || [])).catch(() => {});
     fetch("/app/api/organisations/geo").then((r) => r.json()).then((d) => setAllPoints(d.points || [])).catch(() => {});
   }, []);
@@ -161,8 +166,18 @@ export default function OrganisationsPage() {
     <AppShell>
       <div className="board-head">
         <h1>{tr.title}</h1>
-        <button className="btn btn-coral" onClick={() => setOpen(true)}>{tr.create}</button>
+        {!restricted && <button className="btn btn-coral" onClick={() => setOpen(true)}>{tr.create}</button>}
       </div>
+
+      {restricted && (
+        <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", background: "#FCEFE9", border: "1px solid #F2C9B8", borderRadius: 14, padding: "14px 18px", marginBottom: 18 }}>
+          <span style={{ fontSize: 22 }}>🔒</span>
+          <p style={{ margin: 0, flex: "1 1 280px", color: "#5E4A73", fontSize: 14, lineHeight: 1.55 }}>
+            {tr.teaser}{total > list.length ? ` (+${total - list.length})` : ""}
+          </p>
+          <Link href="/charte" className="btn btn-coral">{tr.join}</Link>
+        </div>
+      )}
 
       {view === "liste" && mine.length > 0 && (
         <div style={{ marginBottom: 22 }}>
