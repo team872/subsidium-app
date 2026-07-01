@@ -37,6 +37,7 @@ export default function IdeaDetailPage() {
   const [comments, setComments] = useState<CommentDTO[]>([]);
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [locked, setLocked] = useState(false);
   const [draft, setDraft] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
@@ -64,6 +65,8 @@ export default function IdeaDetailPage() {
     fetch(`/app/api/ideas/${id}`)
       .then((r) => r.json())
       .then((d) => {
+        // Visiteur non payé : la route renvoie { locked: true } → mur d'adhésion.
+        if (d && d.locked) { setLocked(true); return; }
         setIdea(d.idea || null);
         setComments(d.comments || []);
         setFollowing(!!d.following);
@@ -175,6 +178,26 @@ export default function IdeaDetailPage() {
       <AppShell>
         <Link href={backHref} className="board-back">← Toutes les idées</Link>
         <p className="board-empty">Chargement…</p>
+      </AppShell>
+    );
+  }
+
+  // Visiteur non payé : détail verrouillé → mur d'adhésion.
+  if (locked) {
+    return (
+      <AppShell>
+        <Link href={backHref} className="board-back">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>
+          Toutes les idées
+        </Link>
+        <div style={{ maxWidth: 560, margin: "40px auto", textAlign: "center", border: "1px solid #EBD9CD", borderRadius: 18, padding: "40px 28px", background: "#FCF9F6" }}>
+          <div style={{ fontSize: 40 }}>🔒</div>
+          <h1 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "10px 0 8px" }}>Idée réservée aux membres</h1>
+          <p style={{ color: "#5E4A73", lineHeight: 1.6, margin: "0 auto 22px", maxWidth: 420 }}>
+            Adhérez à Subsidium pour consulter le détail de cette idée, participer à l'échange et soutenir les initiatives citoyennes.
+          </p>
+          <Link href="/charte" className="btn btn-coral">Adhérer pour accéder</Link>
+        </div>
       </AppShell>
     );
   }
