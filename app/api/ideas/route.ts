@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
-import { listIdeas, createIdea, getUserPublic, displayName } from "@/lib/data";
+import { listIdeas, createIdea, getUserPublic, displayName, listIdeasVisitor, countIdeasPubliques } from "@/lib/data";
+import { isRestrictedVisitor, VISITOR_SAMPLE } from "@/lib/visitor";
 import { CAT_COLOR } from "@/lib/feed";
 import { geocode } from "@/lib/geo";
 
@@ -9,10 +10,18 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    // Visiteur non payé : uniquement quelques idées officielles (Subsidium), description tronquée.
+    if (await isRestrictedVisitor()) {
+      const [ideas, total] = await Promise.all([
+        listIdeasVisitor(VISITOR_SAMPLE),
+        countIdeasPubliques(),
+      ]);
+      return NextResponse.json({ ideas, restricted: true, total });
+    }
     // L'utilisateur courant (s'il est connecté) enrichit chaque idée des drapeaux
     // « suivie » / « émise par moi » / « likée » (cf recette AN044/AN046/AN056/AN060).
     const uid = await getUserId();
-    return NextResponse.json({ ideas: await listIdeas(uid ?? undefined) });
+    return NextResponse.json({ ideas: await listIdeas(uid ?? undefined), restricted: false });
   } catch {
     return NextResponse.json({ error: "Idées indisponibles." }, { status: 500 });
   }

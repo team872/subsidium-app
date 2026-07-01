@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { getUserPublic } from "@/lib/data";
-import { listProjets, createProjet } from "@/lib/projetsData";
+import { listProjets, createProjet, listProjetsVisitor, countProjetsPublics } from "@/lib/projetsData";
+import { isRestrictedVisitor, VISITOR_SAMPLE } from "@/lib/visitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +11,15 @@ export async function GET(req: NextRequest) {
   const uid = await getUserId();
   const filter = req.nextUrl.searchParams.get("filter") || "tous";
   try {
-    return NextResponse.json({ projets: await listProjets(filter, uid) });
+    // Visiteur non payé : uniquement quelques projets officiels (Subsidium), description tronquée.
+    if (await isRestrictedVisitor()) {
+      const [projets, total] = await Promise.all([
+        listProjetsVisitor(VISITOR_SAMPLE),
+        countProjetsPublics(),
+      ]);
+      return NextResponse.json({ projets, restricted: true, total });
+    }
+    return NextResponse.json({ projets: await listProjets(filter, uid), restricted: false });
   } catch {
     return NextResponse.json({ projets: [] });
   }

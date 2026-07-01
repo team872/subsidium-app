@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { getIdea, listComments, isFollowing, updateIdea } from "@/lib/data";
 import { getIdeaProjet } from "@/lib/projetsData";
+import { isRestrictedVisitor } from "@/lib/visitor";
 import { CAT_COLOR } from "@/lib/feed";
 import { geocode } from "@/lib/geo";
 
@@ -12,6 +13,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   try {
     const id = Number(params.id);
     if (!Number.isInteger(id)) return NextResponse.json({ error: "Idée introuvable." }, { status: 404 });
+    // Visiteur non payé : détail d'une idée verrouillé (mur d'adhésion).
+    if (await isRestrictedVisitor()) {
+      return NextResponse.json(
+        { locked: true, error: "Adhérez à Subsidium pour consulter le détail d'une idée." },
+        { status: 403 }
+      );
+    }
     const uid = await getUserId();
     const idea = await getIdea(id, uid ?? undefined);
     if (!idea) return NextResponse.json({ error: "Idée introuvable." }, { status: 404 });

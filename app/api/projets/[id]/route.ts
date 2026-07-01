@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { getProjet, getMembership, isOwner, listMembers, listPosts, hasCandidated } from "@/lib/projetsData";
+import { isRestrictedVisitor } from "@/lib/visitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +9,13 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const id = Number(params.id);
   try {
+    // Visiteur non payé : détail d'un projet verrouillé (mur d'adhésion).
+    if (await isRestrictedVisitor()) {
+      return NextResponse.json(
+        { locked: true, error: "Adhérez à Subsidium pour consulter le détail d'un projet." },
+        { status: 403 }
+      );
+    }
     const projet = await getProjet(id);
     if (!projet) return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
     const uid = await getUserId();

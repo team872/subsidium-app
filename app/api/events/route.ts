@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listEvents, getUserPublic } from "@/lib/data";
+import { listEvents, getUserPublic, listEventsVisitor, countEvents } from "@/lib/data";
 import { getUserId } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
+import { isRestrictedVisitor, VISITOR_SAMPLE } from "@/lib/visitor";
 import { createActualite } from "@/lib/actualites";
 
 export const runtime = "nodejs";
@@ -9,7 +10,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    return NextResponse.json({ events: await listEvents() });
+    // Visiteur non payé : aperçu limité des actualités/événements (contenu officiel Subsidium).
+    if (await isRestrictedVisitor()) {
+      const [events, total] = await Promise.all([
+        listEventsVisitor(VISITOR_SAMPLE * 2),
+        countEvents(),
+      ]);
+      return NextResponse.json({ events, restricted: true, total });
+    }
+    return NextResponse.json({ events: await listEvents(), restricted: false });
   } catch {
     return NextResponse.json({ error: "Événements indisponibles." }, { status: 500 });
   }
