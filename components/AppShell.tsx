@@ -30,9 +30,6 @@ const ICONS: Record<string, JSX.Element> = {
   marche: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" /></svg>
   ),
-  energie: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>
-  ),
   leader: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5" /><path d="M8.5 12.5L7 22l5-3 5 3-1.5-9.5" /></svg>
   ),
@@ -60,8 +57,8 @@ const NAV = [
   { href: "/projets", key: "projets", minNiveau: 0 },
   { href: "/organisations", key: "organisations", minNiveau: 0 },
   { href: "/missions", key: "missions", minNiveau: 2 },
+  // « Énergie » a été fusionné dans la Market-place (doctrine : Champ d'Énergie = Market Place).
   { href: "/marche", key: "marche", minNiveau: 2 },
-  { href: "/energie", key: "energie", minNiveau: 2 },
   { href: "/leader", key: "leader", minNiveau: 2 },
   { href: "/clubs", key: "clubs", minNiveau: 2 },
   { href: "/evenements", key: "evenements", minNiveau: 0 },
@@ -69,11 +66,6 @@ const NAV = [
   { href: "/faq", key: "faq", minNiveau: 0 },
   { href: "/admin", key: "admin", adminOnly: true },
 ];
-
-// Libellés de nav non encore présents dans le dictionnaire i18n central (override inline).
-const NAV_LABEL: Record<string, Record<string, string>> = {
-  energie: { fr: "Énergie", en: "Energy", it: "Energia" },
-};
 
 // Bandeau « Aperçu » affiché aux visiteurs NON connectés (recette AN049) :
 // la consultation est ouverte sur du contenu de démonstration ; on invite à créer un compte gratuit.
@@ -144,7 +136,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {nav.map((n) => (
             <Link key={n.key} href={n.href} className={pathname === n.href ? "active" : ""}>
               {ICONS[n.key]}
-              <span>{NAV_LABEL[n.key]?.[lang] || t(`nav.${n.key}`)}</span>
+              <span>{t(`nav.${n.key}`)}</span>
               {n.key === "notifications" && unread > 0 && (
                 <i
                   aria-label={`${unread}`}
