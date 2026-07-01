@@ -54,18 +54,58 @@ function renderRich(text: string) {
   });
 }
 
+// Petit indicateur « le bot réfléchit » : trois points qui rebondissent.
+function TypingDots() {
+  return (
+    <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }} aria-label="…">
+      <span className="subx-dot" />
+      <span className="subx-dot" style={{ animationDelay: ".15s" }} />
+      <span className="subx-dot" style={{ animationDelay: ".3s" }} />
+    </span>
+  );
+}
+
 export default function Mascotte() {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false);       // requête en cours (réseau OU frappe)
+  const [thinking, setThinking] = useState(false); // phase réseau : points animés
+  const [streaming, setStreaming] = useState(false); // phase frappe : curseur clignotant
   const scrollRef = useRef<HTMLDivElement>(null);
+  const revealTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [history, busy, open]);
+  }, [history, thinking, streaming, open]);
+
+  // Nettoyage du minuteur de frappe si le composant est démonté.
+  useEffect(() => () => { if (revealTimer.current) window.clearTimeout(revealTimer.current); }, []);
+
+  // Révèle le texte progressivement (effet machine à écrire) par petits paquets de caractères.
+  function reveal(full: string, base: Msg[]): Promise<void> {
+    return new Promise((resolve) => {
+      let i = 0;
+      setStreaming(true);
+      setHistory([...base, { role: "assistant", content: "" }]);
+      const step = () => {
+        // On avance de 1 à 3 caractères, en absorbant les espaces pour un rendu naturel.
+        i += 1 + Math.floor(Math.random() * 3);
+        if (full[i] === " ") i += 1;
+        const slice = full.slice(0, i);
+        setHistory([...base, { role: "assistant", content: slice }]);
+        if (i < full.length) {
+          revealTimer.current = window.setTimeout(step, 18);
+        } else {
+          setStreaming(false);
+          resolve();
+        }
+      };
+      revealTimer.current = window.setTimeout(step, 130);
+    });
+  }
 
   async function ask(text: string) {
     const tx = text.trim();
@@ -74,13 +114,18 @@ export default function Mascotte() {
     const next: Msg[] = [...history, { role: "user", content: tx }];
     setHistory(next);
     setBusy(true);
+    setThinking(true);
+    let full = "";
     try {
       const r = await fetch("/app/api/assistant/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: next }) });
       const d = await r.json();
-      setHistory([...next, { role: "assistant", content: d.reply || d.error || t("bot.fallback") }]);
+      full = d.reply || d.error || t("bot.fallback");
     } catch {
-      setHistory([...next, { role: "assistant", content: t("bot.offline") }]);
+      full = t("bot.offline");
     }
+    setThinking(false);
+    // Petit délai pour laisser voir les points, puis frappe progressive.
+    await reveal(full, next);
     setBusy(false);
   }
 
@@ -88,6 +133,13 @@ export default function Mascotte() {
 
   return (
     <>
+      <style>{`
+        .subx-dot{width:7px;height:7px;border-radius:999px;background:#C2452F;display:inline-block;animation:subx-bounce 1.1s infinite ease-in-out}
+        @keyframes subx-bounce{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-5px);opacity:1}}
+        .subx-caret{display:inline-block;width:2px;height:1em;background:#C2452F;margin-left:1px;vertical-align:-2px;animation:subx-blink 1s steps(1) infinite}
+        @keyframes subx-blink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+      `}</style>
+
       {open && (
         <div style={{ position: "fixed", right: 24, bottom: 96, width: 360, maxWidth: "calc(100vw - 32px)", height: 500, maxHeight: "calc(100vh - 130px)", background: "#fff", border: "1px solid #EBD9CD", borderRadius: 18, boxShadow: "0 18px 50px rgba(55,38,70,.22)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 70 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "linear-gradient(135deg,#F27B6A,#C2452F)", color: "#fff" }}>
@@ -105,12 +157,22 @@ export default function Mascotte() {
                 ))}
               </div>
             )}
-            {history.map((m, i) => (
-              <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "88%", background: m.role === "user" ? "linear-gradient(135deg,#F27B6A,#C2452F)" : "#fff", color: m.role === "user" ? "#fff" : "#372646", border: m.role === "user" ? "none" : "1px solid #EBD9CD", borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "10px 12px", fontSize: 14, lineHeight: 1.55 }}>
-                {m.role === "user" ? <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span> : <div>{renderRich(m.content)}</div>}
+            {history.map((m, i) => {
+              const isLast = i === history.length - 1;
+              const showCaret = streaming && isLast && m.role === "assistant";
+              return (
+                <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "88%", background: m.role === "user" ? "linear-gradient(135deg,#F27B6A,#C2452F)" : "#fff", color: m.role === "user" ? "#fff" : "#372646", border: m.role === "user" ? "none" : "1px solid #EBD9CD", borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "10px 12px", fontSize: 14, lineHeight: 1.55 }}>
+                  {m.role === "user"
+                    ? <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
+                    : <div>{renderRich(m.content)}{showCaret && <span className="subx-caret" />}</div>}
+                </div>
+              );
+            })}
+            {thinking && (
+              <div style={{ alignSelf: "flex-start", background: "#fff", border: "1px solid #EBD9CD", borderRadius: "14px 14px 14px 4px", padding: "12px 14px", display: "flex", alignItems: "center" }}>
+                <TypingDots />
               </div>
-            ))}
-            {busy && <div style={{ alignSelf: "flex-start", color: "#9C919E", fontSize: 13, fontStyle: "italic", padding: "4px 6px" }}>{BOT} {t("bot.thinking")}</div>}
+            )}
           </div>
 
           <div style={{ display: "flex", gap: 8, padding: 10, borderTop: "1px solid #F0E6DD", background: "#fff" }}>
