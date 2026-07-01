@@ -56,7 +56,8 @@ const ICONS: Record<string, JSX.Element> = {
 const NAV = [
   { href: "/accueil", key: "accueil", minNiveau: 0 },
   { href: "/idees", key: "idees", minNiveau: 0 },
-  { href: "/projets", key: "projets", minNiveau: 2 },
+  // Projets visible dès le visiteur (aperçu restreint côté serveur : projets officiels only).
+  { href: "/projets", key: "projets", minNiveau: 0 },
   { href: "/organisations", key: "organisations", minNiveau: 0 },
   { href: "/missions", key: "missions", minNiveau: 2 },
   { href: "/marche", key: "marche", minNiveau: 2 },
