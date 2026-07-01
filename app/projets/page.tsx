@@ -31,6 +31,7 @@ const DICT: Record<string, Dict> = {
     fTitle: "Titre du projet", fTheme: "Thème", fLieu: "Lieu", fDesc: "Description", fImage: "Image",
     phTheme: "Ex. Faire ensemble, Mobilité, Solidarité…", phLieu: "Ville, quartier…", phDesc: "Présentez l'objectif et le déroulé du projet…",
     priveLabel: "Projet privé (visible uniquement par les membres)", close: "Fermer",
+    teaser: "Aperçu Visiteur : vous voyez quelques projets d'exemple. Adhérez pour découvrir tous les appels à projet, suivre les projets et candidater.", join: "Adhérer pour tout voir",
   },
   en: {
     title: "Projects", publish: "Publish a project",
@@ -44,6 +45,7 @@ const DICT: Record<string, Dict> = {
     fTitle: "Project title", fTheme: "Theme", fLieu: "Location", fDesc: "Description", fImage: "Image",
     phTheme: "E.g. Acting together, Mobility, Solidarity…", phLieu: "City, neighbourhood…", phDesc: "Describe the goal and the steps of the project…",
     priveLabel: "Private project (visible to members only)", close: "Close",
+    teaser: "Visitor preview: you see a few sample projects. Join to browse all calls for projects, follow projects and apply.", join: "Join to see everything",
   },
   it: {
     title: "Progetti", publish: "Pubblica un progetto",
@@ -57,6 +59,7 @@ const DICT: Record<string, Dict> = {
     fTitle: "Titolo del progetto", fTheme: "Tema", fLieu: "Luogo", fDesc: "Descrizione", fImage: "Immagine",
     phTheme: "Es. Fare insieme, Mobilità, Solidarietà…", phLieu: "Città, quartiere…", phDesc: "Presenta l'obiettivo e lo svolgimento del progetto…",
     priveLabel: "Progetto privato (visibile solo ai membri)", close: "Chiudi",
+    teaser: "Anteprima Visitatore: vedi alcuni progetti di esempio. Aderisci per scoprire tutti gli appelli a progetto, seguire i progetti e candidarti.", join: "Aderisci per vedere tutto",
   },
 };
 
@@ -106,6 +109,8 @@ export default function ProjetsPage() {
   const [tab, setTab] = useState("tous");
   const [projets, setProjets] = useState<Projet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restricted, setRestricted] = useState(false);
+  const [total, setTotal] = useState(0);
   const [niveau, setNiveau] = useState(0);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"liste" | "carte">("liste");
@@ -130,7 +135,7 @@ export default function ProjetsPage() {
 
   function load(t: string) {
     setLoading(true);
-    fetch(`/app/api/projets?filter=${t}`).then((r) => r.json()).then((d) => setProjets(d.projets || [])).catch(() => {}).finally(() => setLoading(false));
+    fetch(`/app/api/projets?filter=${t}`).then((r) => r.json()).then((d) => { setProjets(d.projets || []); setRestricted(!!d.restricted); setTotal(Number(d.total ?? 0)); }).catch(() => {}).finally(() => setLoading(false));
   }
   useEffect(() => { load(tab); }, [tab]);
   useEffect(() => {
@@ -167,13 +172,26 @@ export default function ProjetsPage() {
         <h1>{tr.title}</h1>
         {canCreate && <button className="btn btn-coral" onClick={() => setOpen(true)}>{tr.publish}</button>}
       </div>
-      <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 14px", lineHeight: 1.6 }}>{tr.intro}</p>
 
-      <div className="board-tabs">
-        {TABS.map(([k, label]) => (
-          <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{label}</button>
-        ))}
-      </div>
+      {restricted ? (
+        <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", background: "#FCEFE9", border: "1px solid #F2C9B8", borderRadius: 14, padding: "14px 18px", marginBottom: 18 }}>
+          <span style={{ fontSize: 22 }}>🔒</span>
+          <p style={{ margin: 0, flex: "1 1 280px", color: "#5E4A73", fontSize: 14, lineHeight: 1.55 }}>
+            {tr.teaser}{total > list.length ? ` (+${total - list.length})` : ""}
+          </p>
+          <Link href="/charte" className="btn btn-coral">{tr.join}</Link>
+        </div>
+      ) : (
+        <p style={{ maxWidth: 760, color: "#5E4A73", margin: "0 0 14px", lineHeight: 1.6 }}>{tr.intro}</p>
+      )}
+
+      {!restricted && (
+        <div className="board-tabs">
+          {TABS.map(([k, label]) => (
+            <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{label}</button>
+          ))}
+        </div>
+      )}
 
       <div className="board-tools">
         <div className="board-search">
