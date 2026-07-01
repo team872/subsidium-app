@@ -124,6 +124,36 @@ export async function getIdea(id: number, userId?: number): Promise<IdeaDTO | nu
   return rows[0] ?? null;
 }
 
+// --- Visibilité restreinte (visiteur non payé) ---
+// « Officiel Subsidium » = idée seed sans auteur (author_id IS NULL). Le contenu créé par
+// un membre (author_id renseigné) n'est PAS exposé au visiteur. On tronque la description
+// et on neutralise les compteurs d'échange (messages, likes) pour limiter la récupération
+// d'informations exploitables sans adhésion. On conserve la localisation démo (non sensible)
+// pour que la vue carte reste illustrée.
+function maskIdea(it: IdeaDTO): IdeaDTO {
+  const d = it.desc || "";
+  return {
+    ...it,
+    desc: d.length > 160 ? d.slice(0, 160).replace(/\s+\S*$/, "") + "…" : d,
+    messages: 0, likes: 0, liked: false, following: false, mine: false,
+  };
+}
+export async function listIdeasVisitor(limit: number): Promise<IdeaDTO[]> {
+  await ensureDb();
+  await ensureImageCols();
+  await ensureLikes();
+  const rows = await query<IdeaDTO>(
+    `${ideaSelect("0")} WHERE i.author_id IS NULL AND i.status <> 'brouillon' ORDER BY i.created_at DESC, i.id DESC LIMIT $1`,
+    [limit]
+  );
+  return rows.map(maskIdea);
+}
+export async function countIdeasPubliques(): Promise<number> {
+  await ensureDb();
+  const r = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM ideas WHERE author_id IS NULL AND status <> 'brouillon'`);
+  return r[0].n;
+}
+
 // Bascule le « j'aime » d'une idée pour un utilisateur et renvoie l'état + le total.
 export async function toggleLike(userId: number, ideaId: number): Promise<{ liked: boolean; likes: number }> {
   await ensureDb();
@@ -253,6 +283,20 @@ export async function listEvents(): Promise<EventDTO[]> {
   await ensureDb();
   await ensureRichEvents();
   return query<EventDTO>(`SELECT id, tag, title, descr AS "desc", day, month, grad, image FROM events ORDER BY id ASC`);
+}
+
+// --- Visibilité restreinte (visiteur non payé) ---
+// Les actualités/événements sont du contenu officiel Subsidium (peu sensible), mais on en
+// limite tout de même la quantité pour le visiteur non payé (aperçu) et on l'invite à adhérer.
+export async function listEventsVisitor(limit: number): Promise<EventDTO[]> {
+  await ensureDb();
+  await ensureRichEvents();
+  return query<EventDTO>(`SELECT id, tag, title, descr AS "desc", day, month, grad, image FROM events ORDER BY id DESC LIMIT $1`, [limit]);
+}
+export async function countEvents(): Promise<number> {
+  await ensureDb();
+  const r = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM events`);
+  return r[0].n;
 }
 
 export async function userStats(userId: number): Promise<{ suivies: number; emises: number }> {
