@@ -99,6 +99,26 @@ export async function getProjet(id: number): Promise<ProjetDTO | null> {
   const rows = await query<any>(`SELECT ${COLS} FROM projets WHERE id=$1`, [id]);
   return rows[0] ? mapProjet(rows[0]) : null;
 }
+
+// --- Visibilité restreinte (visiteur non payé) ---
+// « Officiel Subsidium » = projet seed sans porteur (owner_id IS NULL) ET public (prive=FALSE).
+// Les projets portés par un membre (owner_id renseigné) ne sont PAS exposés au visiteur.
+// On tronque la description pour limiter la récupération d'informations sans adhésion.
+export function maskProjet(p: ProjetDTO): ProjetDTO {
+  const d = p.desc || "";
+  return { ...p, desc: d.length > 160 ? d.slice(0, 160).replace(/\s+\S*$/, "") + "…" : d };
+}
+export async function listProjetsVisitor(limit: number): Promise<ProjetDTO[]> {
+  await ensureProjets();
+  const rows = await query<any>(`SELECT ${COLS} FROM projets WHERE prive = FALSE AND owner_id IS NULL ORDER BY id DESC LIMIT $1`, [limit]);
+  return rows.map(mapProjet).map(maskProjet);
+}
+export async function countProjetsPublics(): Promise<number> {
+  await ensureProjets();
+  const r = await query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM projets WHERE prive = FALSE AND owner_id IS NULL`);
+  return r[0].n;
+}
+
 export async function createProjet(ownerId: number, f: { title: string; theme?: string; desc?: string; lieu?: string; prive?: boolean; image?: string | null }): Promise<number> {
   await ensureProjets();
   const rows = await query<{ id: number }>(
