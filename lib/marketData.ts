@@ -3,6 +3,9 @@ import { ensureOrg } from "./orgData";
 
 // Market-place (espace Initiateur) : offres et services + côté émetteur (une organisation
 // publie des offres et consulte les demandes de contact). Seed AVP (p160-163).
+// NB (fusion 01/07) : la doctrine (Glossaire SUBSIDIUM) définit le « Champ d'Énergie » comme
+// étant la Market Place — « Lieu des ressources et accompagnements ». L'ancien module Énergie
+// a donc été fusionné ici : ses ressources de soutien sont amorcées comme offres du catalogue.
 
 export type OffreDTO = { id: number; title: string; provider: string; desc: string; price: string; grad: string; image: string | null };
 export type EmittedOffreDTO = OffreDTO & { contacts: number };
@@ -24,6 +27,20 @@ const SEED = [
   { title: "Évaluation professionnelle 360", price: "0,00 €", desc: "Un bilan complet de vos compétences et de votre posture d'engagement, avec retours croisés et plan de progrès." },
   { title: "Kit de projet thématique", price: "250,00 €", desc: "Un kit clé en main (modèles, méthodes, supports) pour lancer rapidement un projet citoyen sur une thématique donnée." },
   { title: "Kit numérique – site web, réseaux sociaux, marketing digital", price: "0,00 €", desc: "Un barème et des ressources pour doter votre initiative d'une présence en ligne efficace : site, réseaux sociaux et communication." },
+];
+
+// Ressources de soutien issues de l'ancien « Champ d'Énergie » (financement, formation, outils,
+// partenaires, accompagnement, communication). Repliées dans la Market-place (offres).
+const ENERGIE_RESSOURCES: { title: string; provider: string; desc: string; price: string }[] = [
+  { title: "Fonds d'amorçage citoyen", provider: "SUBSIDIUM", desc: "Une aide de démarrage pour lancer votre première initiative locale, sans dossier complexe. Idéal pour couvrir les premiers frais (matériel, communication, première rencontre).", price: "Sur accompagnement" },
+  { title: "Budget participatif", provider: "Collectivités partenaires", desc: "Mobilisez le budget participatif de votre commune pour financer votre projet. Nous vous aidons à monter et défendre votre dossier.", price: "Sur accompagnement" },
+  { title: "Parcours Leader & formations", provider: "SUBSIDIUM", desc: "Montez en compétences pour porter et animer un collectif : posture, méthode, mobilisation. Accès aux modules du Parcours Leader.", price: "Sur accompagnement" },
+  { title: "Boîte à outils du porteur", provider: "SUBSIDIUM", desc: "Modèles, check-lists et guides méthodologiques pour structurer votre projet, de l'idée à la mise en œuvre.", price: "Sur accompagnement" },
+  { title: "Annuaire des partenaires", provider: "Réseau SUBSIDIUM", desc: "Trouvez des associations, collectivités et entreprises labellisées prêtes à soutenir votre action sur votre territoire.", price: "Sur accompagnement" },
+  { title: "Mentorat & accompagnement", provider: "Leaders SUBSIDIUM", desc: "Bénéficiez de l'accompagnement d'un Refondateur Certifié (Leader) pour structurer et faire grandir votre initiative.", price: "Sur accompagnement" },
+  { title: "Kit de communication", provider: "SUBSIDIUM", desc: "Affiches, visuels et messages-types prêts à l'emploi pour faire connaître votre initiative et mobiliser autour de vous.", price: "Sur accompagnement" },
+  { title: "Mise en relation experts", provider: "Réseau SUBSIDIUM", desc: "Sollicitez des experts du réseau (juridique, financement, communication) pour lever un point de blocage précis.", price: "Sur accompagnement" },
+  { title: "Cartographie des ressources locales", provider: "SUBSIDIUM", desc: "Visualisez sur la carte les ressources et acteurs disponibles autour de votre projet pour activer les bons relais.", price: "Sur accompagnement" },
 ];
 
 let ready: Promise<void> | null = null;
@@ -52,6 +69,15 @@ async function init(): Promise<void> {
     for (const o of SEED) {
       await query(`INSERT INTO offres (title,provider,descr,price) VALUES ($1,'Subsidium',$2,$3)`, [o.title, o.desc, o.price]);
     }
+  }
+  // Fusion Énergie → Market-place : on amorce les ressources de soutien comme offres,
+  // de façon idempotente (insérées seulement si absentes, repérées par leur titre).
+  for (const e of ENERGIE_RESSOURCES) {
+    await query(
+      `INSERT INTO offres (title,provider,descr,price)
+       SELECT $1,$2,$3,$4 WHERE NOT EXISTS (SELECT 1 FROM offres WHERE title=$1)`,
+      [e.title, e.provider, e.desc, e.price]
+    );
   }
 }
 
