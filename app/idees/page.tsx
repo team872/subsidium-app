@@ -126,6 +126,8 @@ function IdeaRow({ it, onLike, onEdit }: { it: IdeaDTO; onLike: (id: number) => 
 export default function IdeesPage() {
   const [items, setItems] = useState<IdeaDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restricted, setRestricted] = useState(false);
+  const [total, setTotal] = useState(0);
   const [tab, setTab] = useState<TabKey>("toutes");
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("");
@@ -150,7 +152,7 @@ export default function IdeesPage() {
   useEffect(() => {
     fetch("/app/api/ideas")
       .then((r) => r.json())
-      .then((d) => setItems(d.ideas || []))
+      .then((d) => { setItems(d.ideas || []); setRestricted(!!d.restricted); setTotal(Number(d.total ?? 0)); })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
@@ -212,7 +214,17 @@ export default function IdeesPage() {
         )}
       </div>
 
-      <ParcoursCTA />
+      {restricted && (
+        <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", background: "#FCEFE9", border: "1px solid #F2C9B8", borderRadius: 14, padding: "14px 18px", marginBottom: 18 }}>
+          <span style={{ fontSize: 22 }}>🔒</span>
+          <p style={{ margin: 0, flex: "1 1 280px", color: "#5E4A73", fontSize: 14, lineHeight: 1.55 }}>
+            Aperçu Visiteur : vous découvrez quelques idées d'exemple. Adhérez pour explorer toutes les idées citoyennes, participer aux échanges et soutenir celles qui vous inspirent.{total > list.length ? ` (+${total - list.length})` : ""}
+          </p>
+          <Link href="/charte" className="btn btn-coral">Adhérer pour tout voir</Link>
+        </div>
+      )}
+
+      {!restricted && <ParcoursCTA />}
 
       {showForm && (
         <IdeaForm onClose={() => setShowForm(false)} onCreated={upsert} />
