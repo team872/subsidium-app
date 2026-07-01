@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import AppShell from "@/components/AppShell";
 import { useLang } from "@/components/LangProvider";
@@ -26,6 +27,7 @@ const DICT: Record<string, Dict> = {
     create: "Créer un événement", close: "Fermer",
     fTag: "Type", fTitle: "Titre", phTitle: "Titre de l'événement", fDay: "Jour", fMonth: "Mois", fDesc: "Description", phDesc: "Décrivez l'événement…", fImage: "Image",
     publish: "Publier", publishing: "Publication…", req: "Titre et description requis.",
+    teaser: "Aperçu Visiteur : vous voyez les dernières actualités. Adhérez pour accéder à toutes les actualités et événements de la communauté.", join: "Adhérer pour tout voir",
   },
   en: {
     title: "News & events",
@@ -37,6 +39,7 @@ const DICT: Record<string, Dict> = {
     create: "Create an event", close: "Close",
     fTag: "Type", fTitle: "Title", phTitle: "Event title", fDay: "Day", fMonth: "Month", fDesc: "Description", phDesc: "Describe the event…", fImage: "Image",
     publish: "Publish", publishing: "Publishing…", req: "Title and description required.",
+    teaser: "Visitor preview: you see the latest news. Join to access all the community's news and events.", join: "Join to see everything",
   },
   it: {
     title: "Notizie ed eventi",
@@ -48,6 +51,7 @@ const DICT: Record<string, Dict> = {
     create: "Crea un evento", close: "Chiudi",
     fTag: "Tipo", fTitle: "Titolo", phTitle: "Titolo dell'evento", fDay: "Giorno", fMonth: "Mese", fDesc: "Descrizione", phDesc: "Descrivi l'evento…", fImage: "Immagine",
     publish: "Pubblica", publishing: "Pubblicazione…", req: "Titolo e descrizione obbligatori.",
+    teaser: "Anteprima Visitatore: vedi le ultime notizie. Aderisci per accedere a tutte le notizie ed eventi della comunità.", join: "Aderisci per vedere tutto",
   },
 };
 
@@ -158,6 +162,8 @@ export default function EvenementsPage() {
   const tr = DICT[lang] || DICT.fr;
   const [items, setItems] = useState<EventDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restricted, setRestricted] = useState(false);
+  const [total, setTotal] = useState(0);
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("Tout afficher");
   const [view, setView] = useState<"liste" | "carte">("liste");
@@ -167,7 +173,7 @@ export default function EvenementsPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   function reload() {
-    fetch("/app/api/events").then((r) => r.json()).then((d) => setItems(d.events || [])).catch(() => setItems([])).finally(() => setLoading(false));
+    fetch("/app/api/events").then((r) => r.json()).then((d) => { setItems(d.events || []); setRestricted(!!d.restricted); setTotal(Number(d.total ?? 0)); }).catch(() => setItems([])).finally(() => setLoading(false));
   }
   useEffect(() => {
     reload();
@@ -211,6 +217,16 @@ export default function EvenementsPage() {
         <h1>{tr.title}</h1>
         {isAdmin && <button className="btn btn-coral" onClick={() => setShowCreate(true)}>{tr.create}</button>}
       </div>
+
+      {restricted && (
+        <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", background: "#FCEFE9", border: "1px solid #F2C9B8", borderRadius: 14, padding: "14px 18px", marginBottom: 18 }}>
+          <span style={{ fontSize: 22 }}>🔒</span>
+          <p style={{ margin: 0, flex: "1 1 280px", color: "#5E4A73", fontSize: 14, lineHeight: 1.55 }}>
+            {tr.teaser}{total > items.length ? ` (+${total - items.length})` : ""}
+          </p>
+          <Link href="/charte" className="btn btn-coral">{tr.join}</Link>
+        </div>
+      )}
 
       {selected && <EventDetail ev={selected} onClose={() => setSelected(null)} />}
       {showCreate && <CreateEvent tr={tr} onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); setLoading(true); reload(); }} />}
