@@ -28,6 +28,7 @@ const DICT: Record<string, Dict> = {
     members: "Membres", noMember: "Aucun membre.", memberWord: "Membre",
     modalTitle: "Candidater au projet", fNom: "Nom", fPrenom: "Prénom", fMail: "Adresse mail", fPres: "Présentation",
     phPres: "Pourquoi souhaitez-vous contribuer à ce projet ?", sending: "Envoi…", sendCand: "Envoyer ma candidature", close: "Fermer",
+    lockTitle: "Projet réservé aux membres", lockBody: "Adhérez à Subsidium pour consulter le détail de ce projet, suivre son avancement et candidater pour y contribuer.", lockCta: "Adhérer pour accéder",
   },
   en: {
     roleOwner: "Owner", roleMembre: "Contributor", roleSuiveur: "Follower",
@@ -42,6 +43,7 @@ const DICT: Record<string, Dict> = {
     members: "Members", noMember: "No member.", memberWord: "Member",
     modalTitle: "Apply to the project", fNom: "Last name", fPrenom: "First name", fMail: "Email address", fPres: "Introduction",
     phPres: "Why would you like to contribute to this project?", sending: "Sending…", sendCand: "Send my application", close: "Close",
+    lockTitle: "Project reserved for members", lockBody: "Join Subsidium to view this project's details, follow its progress and apply to contribute.", lockCta: "Join to access",
   },
   it: {
     roleOwner: "Titolare", roleMembre: "Contributore", roleSuiveur: "Follower",
@@ -56,6 +58,7 @@ const DICT: Record<string, Dict> = {
     members: "Membri", noMember: "Nessun membro.", memberWord: "Membro",
     modalTitle: "Candidati al progetto", fNom: "Cognome", fPrenom: "Nome", fMail: "Indirizzo e-mail", fPres: "Presentazione",
     phPres: "Perché vuoi contribuire a questo progetto?", sending: "Invio…", sendCand: "Invia la mia candidatura", close: "Chiudi",
+    lockTitle: "Progetto riservato ai membri", lockBody: "Aderisci a Subsidium per vedere i dettagli del progetto, seguirne l'avanzamento e candidarti a contribuire.", lockCta: "Aderisci per accedere",
   },
 };
 
@@ -80,6 +83,7 @@ export default function ProjetDetailPage() {
   const id = Number(params?.id);
   const [projet, setProjet] = useState<Projet | null>(null);
   const [restricted, setRestricted] = useState(false);
+  const [locked, setLocked] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [hasCand, setHasCand] = useState(false);
@@ -101,6 +105,8 @@ export default function ProjetDetailPage() {
 
   function load() {
     return fetch(`/app/api/projets/${id}`).then((r) => r.json()).then((d) => {
+      // Visiteur non payé : la route renvoie { locked: true } → mur d'adhésion.
+      if (d && d.locked) { setLocked(true); return; }
       setProjet(d.projet || null); setRestricted(!!d.restricted); setRole(d.role || null);
       setIsOwner(!!d.isOwner); setHasCand(!!d.hasCandidated); setMembers(d.members || []); setPosts(d.posts || []);
       if (d.isOwner) fetch(`/app/api/projets/${id}/candidatures`).then((x) => x.json()).then((c) => setCands(c.candidatures || [])).catch(() => {});
@@ -149,6 +155,23 @@ export default function ProjetDetailPage() {
   }
 
   if (loading) return <AppShell><Link href={backHref} className="board-back">← {tr.back}</Link><p className="board-empty">{tr.loading}</p></AppShell>;
+
+  // Visiteur non payé : détail verrouillé → mur d'adhésion.
+  if (locked) return (
+    <AppShell>
+      <Link href={backHref} className="board-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></svg>
+        {tr.back}
+      </Link>
+      <div style={{ maxWidth: 560, margin: "40px auto", textAlign: "center", border: "1px solid #EBD9CD", borderRadius: 18, padding: "40px 28px", background: "#FCF9F6" }}>
+        <div style={{ fontSize: 40 }}>🔒</div>
+        <h1 style={{ fontFamily: "var(--font-display),cursive", color: "#372646", margin: "10px 0 8px" }}>{tr.lockTitle}</h1>
+        <p style={{ color: "#5E4A73", lineHeight: 1.6, margin: "0 auto 22px", maxWidth: 420 }}>{tr.lockBody}</p>
+        <Link href="/charte" className="btn btn-coral">{tr.lockCta}</Link>
+      </div>
+    </AppShell>
+  );
+
   if (!projet) return <AppShell><Link href={backHref} className="board-back">← {tr.back}</Link><p className="board-empty">{tr.notfound}</p></AppShell>;
 
   const peutPoster = role === "owner" || role === "membre";
